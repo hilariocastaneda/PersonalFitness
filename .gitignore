@@ -1,0 +1,11 @@
+# dependencies
+node_modules/
+
+# database (auto-created on first run — see server/server.js loadData())
+info.json
+
+# user-uploaded photos (wardrobe, outfit checks)
+client/images/uploaded/
+
+# admin-managed exercise reference photos
+client/images/system/exercise/

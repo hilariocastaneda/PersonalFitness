@@ -1,0 +1,1787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Fromesco</title>
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Fromesco" />
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+<link rel="apple-touch-icon" sizes="167x167" href="/icon-167.png" />
+<link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<style>
+  :root{
+    --bg:#0a0a0a; --surface:#161616; --surface2:#1e1e1e; --surface3:#262626; --border:#2a2a2a;
+    --text:#f2f2f2; --text-dim:#9a9a9a; --accent:#2dd4bf; --accent-2:#fb923c; --accent-dim:#0f766e;
+    --danger:#f87171; --radius:16px; --radius-sm:10px; --nav-h:64px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{touch-action:manipulation; -webkit-text-size-adjust:100%;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  #app{max-width:720px;margin:0 auto;min-height:100vh;}
+  .view{padding:16px 16px 88px;padding-top:max(16px, calc(env(safe-area-inset-top) + 16px));}
+  .view.with-nav{padding-top:calc(var(--nav-h) + env(safe-area-inset-top) + 16px);}
+  h1,h2,h3{margin:0 0 12px;}
+  h1{font-size:23px;font-weight:700;letter-spacing:-.01em;} h2{font-size:18px;} h3{font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  p{color:var(--text-dim);line-height:1.5;}
+  a{color:var(--accent);}
+  .card{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 8px 20px -12px rgba(0,0,0,.5);}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .col{display:flex;flex-direction:column;gap:6px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:480px){.grid2{grid-template-columns:1fr;}}
+  label{font-size:13px;color:var(--text-dim);}
+  input,select,textarea{background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:11px 13px;font-size:16px;width:100%;line-height:1.3;transition:border-color .15s;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);}
+  select{-webkit-appearance:none;appearance:none;padding-right:36px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239a9a9a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}
+  input[type="checkbox"],input[type="radio"]{width:20px;height:20px;flex-shrink:0;accent-color:var(--accent);cursor:pointer;}
+  textarea{resize:vertical;min-height:70px;}
+  button{background:var(--accent);color:#04201d;border:none;border-radius:var(--radius-sm);padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;transition:transform .1s,filter .15s;}
+  button:active{transform:scale(.96);}
+  button:hover{filter:brightness(1.08);}
+  button.secondary{background:var(--surface3);color:var(--text);border:1px solid var(--border);}
+  button.danger{background:var(--danger);color:#2b0a0a;}
+  button.ghost{background:transparent;color:var(--accent);padding:8px 4px;}
+  button.block{width:100%;}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+  .list-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);}
+  .list-item:last-child{border-bottom:none;}
+  .pill{display:inline-block;background:var(--surface3);border-radius:999px;padding:4px 11px;font-size:12px;color:var(--text-dim);}
+  .pill.accent{background:var(--accent-dim);color:#d1fff8;}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 0 14px;}
+  .brand svg{width:34px;height:34px;flex-shrink:0;}
+  .brand span{font-weight:700;font-size:17px;letter-spacing:-.01em;}
+  .nav{position:fixed;top:0;left:0;right:0;background:rgba(10,10,10,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:30;padding-top:env(safe-area-inset-top);}
+  .nav-inner{max-width:720px;margin:0 auto;height:var(--nav-h);padding:0 16px;display:flex;gap:6px;align-items:center;}
+  .nav button{flex:1;background:transparent;color:var(--text-dim);font-weight:500;padding:9px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;border-radius:12px;}
+  .nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
+  .nav button.active{background:var(--surface2);color:var(--accent);}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;margin:0 auto;}
+  .pin-pad button{font-size:21px;padding:18px 0;background:var(--surface3);color:var(--text);}
+  .pin-pad button:active{background:var(--accent);color:#04201d;}
+  .pin-dots{display:flex;gap:16px;justify-content:center;margin:22px 0;}
+  .pin-dots span{width:14px;height:14px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);transition:background .15s;}
+  .pin-dots span.filled{background:var(--accent);border-color:var(--accent);}
+  .center{text-align:center;}
+  .error{color:var(--danger);font-size:13px;margin-top:6px;}
+  .muted{color:var(--text-dim);font-size:13px;}
+  .badge-admin{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04201d;border-radius:999px;padding:2px 9px;font-size:11px;margin-left:6px;font-weight:700;}
+  fieldset{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;padding:14px;}
+  legend{padding:0 6px;color:var(--text-dim);font-size:13px;}
+  .plan-day{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 8px 20px -12px rgba(0,0,0,.5);}
+  .plan-day.today{border-color:var(--accent);}
+  .plan-day-header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;background:var(--surface3);border-bottom:1px solid var(--border);}
+  .plan-day-name{font-weight:700;font-size:15px;color:var(--text);}
+  .plan-day-today-badge{margin-left:2px;font-size:10px;background:var(--accent);color:#04201d;padding:2px 8px;border-radius:999px;font-weight:700;vertical-align:middle;}
+  .plan-day-body{padding:2px 16px;}
+  .plan-day-body .list-item span:first-child{color:var(--text);font-weight:500;}
+  .workout-bar{position:sticky;top:calc(var(--nav-h) + env(safe-area-inset-top) + 8px);background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--accent);border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;z-index:5;box-shadow:0 8px 20px -8px rgba(0,0,0,.6);}
+  .workout-timer-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;}
+  .workout-timer{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent);}
+  .workout-exercise{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+  .workout-exercise-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;}
+  .workout-exercise-name{font-weight:600;font-size:15px;}
+  .workout-controls{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+  .stepper{display:flex;align-items:center;gap:8px;background:var(--surface3);border-radius:10px;padding:4px;}
+  .stepper button{width:30px;height:30px;border-radius:7px;padding:0;background:var(--bg);color:var(--text);font-size:17px;font-weight:700;line-height:1;}
+  .stepper-value{min-width:46px;text-align:center;font-weight:700;font-size:14px;color:var(--text);}
+  .stepper-value .unit{font-weight:400;color:var(--text-dim);font-size:11px;}
+  .exercise-link{cursor:pointer;text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px;}
+  .list-item-clickable{cursor:pointer;margin:0 -14px;padding:11px 14px;border-radius:10px;transition:background .12s;}
+  .list-item-clickable:active{background:var(--surface3);}
+  .thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--surface3);flex-shrink:0;}
+  .thumb-lg{width:100%;border-radius:var(--radius);object-fit:cover;max-height:220px;}
+  .score-badge{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;}
+  .score-1,.score-2{background:rgba(248,113,113,.15);color:#f87171;}
+  .score-3{background:rgba(251,191,36,.15);color:#fbbf24;}
+  .score-4,.score-5{background:rgba(45,212,191,.15);color:var(--accent);}
+  .step-dots{display:flex;gap:8px;justify-content:center;margin-bottom:18px;}
+  .step-dots span{width:8px;height:8px;border-radius:50%;background:var(--surface3);transition:background .2s,width .2s;}
+  .step-dots span.active{background:var(--accent);width:22px;border-radius:4px;}
+  .step-icon{width:46px;height:46px;border-radius:14px;background:var(--surface3);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;}
+  .step-icon svg{width:24px;height:24px;stroke:var(--accent);fill:none;stroke-width:2;}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+  @media (min-width:600px){.overlay{align-items:center;}}
+  .sheet{background:var(--surface2);border:1px solid var(--border);border-top-left-radius:20px;border-top-right-radius:20px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:20px;}
+  @media (min-width:600px){.sheet{border-radius:20px;}}
+  .close-x{background:var(--surface3);width:32px;height:32px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;color:var(--text-dim);}
+  .icon-btn{background:var(--surface3);width:34px;height:34px;border-radius:10px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .icon-btn svg{width:16px;height:16px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .icon-btn.danger{background:rgba(248,113,113,.12);}
+  .icon-btn.danger svg{stroke:var(--danger);}
+  .upload-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;}
+  .upload-box svg{width:22px;height:22px;stroke:var(--text-dim);fill:none;stroke-width:2;}
+  .upload-box:hover{border-color:var(--accent);}
+
+  /* Fitness score urgency (Designer) */
+  @keyframes pulse-red{0%{box-shadow:0 0 0 0 rgba(248,113,113,.5);}70%{box-shadow:0 0 0 10px rgba(248,113,113,0);}100%{box-shadow:0 0 0 0 rgba(248,113,113,0);}}
+  .fitness-score-card.tier-critical{border-color:var(--danger);animation:pulse-red 2.2s infinite;}
+  .fitness-score-card.tier-low{border-color:var(--accent-2);}
+
+  /* Exercise sort control */
+  .sort-select{width:auto;padding:8px 30px 8px 10px;font-size:13px;}
+
+  /* Color picker + swatches */
+  .color-swatch{display:inline-block;border-radius:50%;border:1px solid rgba(255,255,255,.25);flex-shrink:0;}
+  .color-picker{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;}
+  .color-swatch-btn{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);padding:0;cursor:pointer;flex-shrink:0;}
+  .color-swatch-btn.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim);}
+
+  /* Wardrobe grid (store-style) */
+  .wardrobe-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .wardrobe-tile{position:relative;background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .wardrobe-tile-photo{width:100%;aspect-ratio:1/1;background:var(--surface3);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .wardrobe-tile-photo img{width:100%;height:100%;object-fit:cover;}
+  .wardrobe-tile-photo svg{width:28px;height:28px;stroke:var(--text-dim);fill:none;stroke-width:2;}
+  .wardrobe-tile-edit{position:absolute;top:8px;right:8px;}
+  .wardrobe-tile-fav{position:absolute;top:8px;left:8px;background:rgba(10,10,10,.55);color:var(--danger);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;}
+  .wardrobe-tile-body{padding:10px 12px 12px;}
+  .wardrobe-tile-name{font-weight:600;font-size:14px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div id="app">Loading…</div>
+
+<script>
+/* ─── LOGO ──────────────────────────────────────────────────────────────── */
+
+const LOGO_SVG = '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">'
+  + '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#fb923c"/></linearGradient></defs>'
+  + '<rect width="512" height="512" rx="112" fill="#0a0a0a"/>'
+  + '<g fill="none" stroke="url(#g)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">'
+  + '<path d="M256 118 C256 96 232 92 232 114 C232 132 256 138 256 156"/>'
+  + '<path d="M256 156 L140 268 L372 268"/>'
+  + '<line x1="104" y1="300" x2="408" y2="300"/></g>'
+  + '<g fill="url(#g)"><rect x="80" y="272" width="34" height="56" rx="10"/><rect x="398" y="272" width="34" height="56" rx="10"/></g>'
+  + '</svg>';
+
+function brandHtml(){ return '<div class="brand">'+LOGO_SVG+'<span>Fromesco</span></div>'; }
+
+const ICONS = {
+  home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  fitness: '<svg viewBox="0 0 24 24"><line x1="4" y1="12" x2="20" y2="12"/><line x1="6" y1="8" x2="6" y2="16"/><line x1="18" y1="8" x2="18" y2="16"/><line x1="2" y1="10" x2="2" y2="14"/><line x1="22" y1="10" x2="22" y2="14"/></svg>',
+  fashion: '<svg viewBox="0 0 24 24"><path d="M12 3l-9 6 3 3 2-1.5V21h8v-10.5l2 1.5 3-3-9-6z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
+  body: '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><path d="M12 8v13M7 12l5-1 5 1M8 21l4-4 4 4"/></svg>',
+  heart: '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  target: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+  camera: '<svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v13H4z"/><circle cx="12" cy="14" r="4"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+  flag: '<svg viewBox="0 0 24 24"><path d="M5 15s1.5-1 5-1 5 2 9 2V4s-1.5 1-5 1-5-2-9-2z"/><line x1="5" y1="22" x2="5" y2="4"/></svg>',
+  info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+};
+
+function iconBtn(icon, cls, attr){ return '<button class="icon-btn '+cls+'" '+attr+'>'+ICONS[icon]+'</button>'; }
+
+/* ─── SESSION + API ─────────────────────────────────────────────────────── */
+
+let session = JSON.parse(localStorage.getItem('pf_session') || 'null');
+let state = { view: session ? 'loading' : 'login-select', pendingName: null, error: null, data: {}, modal: null, onboardingStep: 0, activeWorkout: null, exerciseSort: 'recommended' };
+
+function saveSession(s){ session = s; localStorage.setItem('pf_session', JSON.stringify(s)); }
+function clearSession(){ session = null; localStorage.removeItem('pf_session'); }
+
+async function api(path, opts){
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers || {});
+  if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+  if (session) headers['X-User-Name'] = session.name;
+  const res = await fetch(path, Object.assign({}, opts, { headers }));
+  let body = null;
+  try { body = await res.json(); } catch(_) {}
+  if (!res.ok) throw new Error((body && body.error) || ('Request failed: ' + res.status));
+  return body;
+}
+
+/* ─── ROUTER / RENDER ───────────────────────────────────────────────────── */
+
+async function boot(){
+  if (!session) { state.view = 'login-select'; render(); bindActiveView(); return; }
+  try {
+    const prof = await api('/profile');
+    state.data.profile = prof.profile;
+    state.data.settings = prof.settings;
+    state.data.bmi = prof.bmi;
+    state.data.fitnessScore = prof.fitnessScore;
+    state.data.aiEnabled = prof.aiEnabled;
+    if (session.isForPasswordReset) state.view = 'change-pin';
+    else if (!prof.profile.completed) { state.view = 'onboarding'; state.onboardingStep = 0; }
+    else state.view = 'dashboard';
+  } catch (e) {
+    clearSession(); state.view = 'login-select';
+  }
+  render();
+  bindActiveView();
+}
+
+function go(view){ state.view = view; state.error = null; render(); bindActiveView(); }
+
+const VIEWS = {};
+function render(){
+  const el = document.getElementById('app');
+  const fn = VIEWS[state.view] || VIEWS['dashboard'];
+  const hasNav = !!(session && !session.isForPasswordReset && !(state.data.profile && !state.data.profile.completed));
+  el.innerHTML = navHtml(hasNav) + '<div class="view'+(hasNav?' with-nav':'')+'">' + (fn ? fn() : '') + '</div>' + modalHtml();
+}
+
+function navHtml(hasNav){
+  if (!hasNav) return '';
+  const tabs = [['dashboard','Home','home'], ['fitness','Fitness','fitness'], ['fashion','Fashion','fashion'], ['settings','Settings','settings']];
+  return '<div class="nav"><div class="nav-inner">' + tabs.map(([v,label,icon]) =>
+    '<button data-nav="'+v+'" class="'+(state.view===v?'active':'')+'">'+ICONS[icon]+'<span>'+label+'</span></button>'
+  ).join('') + '</div></div>';
+}
+
+document.addEventListener('click', (e) => {
+  const nav = e.target.closest('[data-nav]');
+  if (nav) return go(nav.getAttribute('data-nav'));
+  // Close button (works even though it's nested inside the sheet — matched via closest()).
+  if (e.target.closest('[data-close-modal]')) { state.modal = null; render(); return; }
+  // Backdrop click: only closes when the click landed directly on the overlay
+  // itself, not when it bubbled up from something inside the sheet.
+  if (e.target.classList && e.target.classList.contains('overlay')) { state.modal = null; render(); }
+});
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function labelize(s){ return String(s).replace(/([A-Z])/g,' $1').replace(/^./, c => c.toUpperCase()); }
+
+/* ─── LOGIN: USER SELECT ────────────────────────────────────────────────── */
+
+VIEWS['login-select'] = () => brandHtml() + '<h1>Who\'s using this?</h1><div class="card" id="account-list"><p class="muted">Loading users…</p></div>';
+
+async function loadAccounts(){
+  try {
+    const r = await api('/accounts');
+    const list = document.getElementById('account-list');
+    if (!list) return;
+    if (!r.accounts.length) { list.innerHTML = '<p class="muted">No users yet.</p>'; return; }
+    list.innerHTML = r.accounts.map(a =>
+      '<div class="list-item"><span>'+escapeHtml(a.name)+'</span><button data-select-user="'+escapeHtml(a.name)+'">Select</button></div>'
+    ).join('');
+  } catch(e) {}
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-select-user]');
+  if (!btn) return;
+  state.pendingName = btn.getAttribute('data-select-user');
+  state.pin = '';
+  go('login-pin');
+});
+
+/* ─── LOGIN: PIN ENTRY ──────────────────────────────────────────────────── */
+
+VIEWS['login-pin'] = () => {
+  const dots = [0,1,2,3].map(i => '<span class="'+(i < (state.pin||'').length ? 'filled':'')+'"></span>').join('');
+  return brandHtml() + '<h1 class="center">Enter PIN for '+escapeHtml(state.pendingName)+'</h1>'
+    + '<div class="pin-dots">'+dots+'</div>'
+    + (state.error ? '<p class="error center">'+escapeHtml(state.error)+'</p>' : '')
+    + pinPadHtml('pin-key')
+    + '<div class="center" style="margin-top:16px;"><button class="secondary" data-nav="login-select">Back</button></div>';
+};
+
+function pinPadHtml(actionAttr){
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  return '<div class="pin-pad">' + keys.map(k => k === '' ? '<div></div>' :
+    '<button data-'+actionAttr+'="'+k+'">'+k+'</button>').join('') + '</div>';
+}
+
+document.addEventListener('click', async (e) => {
+  const key = e.target.closest('[data-pin-key]');
+  if (!key || state.view !== 'login-pin') return;
+  const k = key.getAttribute('data-pin-key');
+  state.pin = state.pin || '';
+  if (k === '⌫') state.pin = state.pin.slice(0, -1);
+  else if (state.pin.length < 4) state.pin += k;
+  if (state.pin.length === 4) {
+    try {
+      const r = await api('/login', { method:'POST', body: JSON.stringify({ name: state.pendingName, pin: state.pin }) });
+      saveSession({ name: r.name, isAdmin: r.isAdmin, isForPasswordReset: r.isForPasswordReset });
+      state.error = null;
+      await boot();
+      return;
+    } catch (err) {
+      state.error = err.message; state.pin = '';
+    }
+  }
+  render();
+});
+
+/* ─── CHANGE PIN ────────────────────────────────────────────────────────── */
+
+VIEWS['change-pin'] = () => brandHtml() + '<h1>'+(session.isForPasswordReset ? 'Set a new PIN' : 'Change PIN')+'</h1>'
+  + (session.isForPasswordReset ? '<p>You\'re using the default PIN. Choose a new 4-digit PIN to continue.</p>' : '')
+  + '<div class="card"><form data-form="change-pin" class="col">'
+  + (session.isForPasswordReset ? '' : '<label>Current PIN<input type="password" inputmode="numeric" maxlength="4" name="currentPin" required></label>')
+  + '<label>New PIN<input type="password" inputmode="numeric" maxlength="4" pattern="\\d{4}" name="newPin" required></label>'
+  + '<label>Confirm New PIN<input type="password" inputmode="numeric" maxlength="4" pattern="\\d{4}" name="confirmPin" required></label>'
+  + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+  + '<button class="block" type="submit">Save PIN</button>'
+  + '</form></div>';
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="change-pin"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  const newPin = fd.get('newPin'), confirmPin = fd.get('confirmPin');
+  if (newPin !== confirmPin) { state.error = 'PINs do not match'; return render(); }
+  try {
+    await api('/change-pin', { method:'POST', body: JSON.stringify({ name: session.name, currentPin: fd.get('currentPin'), newPin }) });
+    saveSession(Object.assign({}, session, { isForPasswordReset: false }));
+    state.error = null;
+    await boot();
+  } catch (err) { state.error = err.message; render(); }
+});
+
+/* ─── ONBOARDING (PROFILE BUILDER — MULTI-STEP) ─────────────────────────── */
+
+const ACTIVITY_LEVELS = ['sedentary','light','moderate','active','veryActive'];
+const DIET_TYPES = ['omnivore','vegetarian','vegan','pescatarian','keto','other'];
+const GOALS = ['weightLoss','muscleGain','strength','endurance','maintenance','styleImprovement'];
+const BODY_SHAPES = ['triangle','invertedTriangle','rectangle','hourglass','oval'];
+const EQUIPMENT_TYPES = ['none','dumbbells','barbell','cableMachine','machine','pullupBar','bike','treadmill'];
+const COMPLEXIONS = ['fair','medium','deep'];
+const HAIR_TYPES = ['straight','wavy','curly','coily'];
+const HAIR_STYLES = ['bald','short','medium','long'];
+const EYE_COLORS = ['brown','blue','green','hazel','gray','amber'];
+
+const ONBOARDING_STEPS = [
+  { icon: 'body', title: 'Let\'s talk about your body', sub: 'This helps us tailor workouts and fits — nothing here is shared beyond this app.' },
+  { icon: 'heart', title: 'Health basics', sub: 'So we can steer around anything that matters.' },
+  { icon: 'clock', title: 'Your everyday rhythm', sub: 'Activity level shapes how intense your plan should be.' },
+  { icon: 'target', title: 'What are you working toward?', sub: 'One primary focus — you can always change it later.' },
+];
+
+VIEWS['onboarding'] = () => {
+  const p = state.data.profile || {};
+  const heightUnits = (state.data.settings && state.data.settings.heightUnits) || 'cm';
+  const weightUnits = (state.data.settings && state.data.settings.weightUnits) || 'kg';
+  const measurementUnits = (state.data.settings && state.data.settings.measurementUnits) || 'cm';
+  const heightLabel = heightUnits === 'cm' ? 'Height (cm)' : 'Height (in)';
+  const weightLabel = weightUnits === 'kg' ? 'Weight (kg)' : 'Weight (lb)';
+  const heightDual = heightUnits === 'cm' ? 'cm-to-in' : 'in-to-cm';
+  const weightDual = weightUnits === 'kg' ? 'kg-to-lb' : 'lb-to-kg';
+  const measureLabel = measurementUnits === 'cm' ? 'cm' : 'in';
+  const measureDual = measurementUnits === 'cm' ? 'cm-to-in' : 'in-to-cm';
+  const step = state.onboardingStep;
+  const meta = ONBOARDING_STEPS[step];
+
+  const dots = ONBOARDING_STEPS.map((_, i) => '<span class="'+(i===step?'active':'')+'"></span>').join('');
+
+  let body = '';
+  if (step === 0) {
+    const aiPhotoHint = state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured;
+    body = '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;" id="face-photo-label">'+(p.facePhoto ? 'Photo saved — tap to replace' : 'Add a face photo (optional)')+'</div><input type="file" accept="image/*" style="display:none;" id="face-photo-input"></label>'
+      + (p.facePhoto ? '<img class="thumb-lg" style="max-height:160px;margin:8px 0;" src="'+p.facePhoto+'">' : '')
+      + (aiPhotoHint ? '<p class="muted" style="margin:6px 0 10px;">AI will auto-detect complexion, hair, and eye color from your photo.</p>' : '<div style="margin-bottom:6px;"></div>')
+      + inputRow(heightLabel, 'height', 'number', p.height, heightDual)
+      + inputRow(weightLabel, 'weight', 'number', p.weight, weightDual)
+      + '<div class="grid2">'
+      + inputRow('Chest ('+measureLabel+')', 'measurements.chest', 'number', p.measurements && p.measurements.chest, measureDual)
+      + inputRow('Waist ('+measureLabel+')', 'measurements.waist', 'number', p.measurements && p.measurements.waist, measureDual)
+      + inputRow('Hips ('+measureLabel+')', 'measurements.hips', 'number', p.measurements && p.measurements.hips, measureDual)
+      + inputRow('Shoulders ('+measureLabel+')', 'measurements.shoulders', 'number', p.measurements && p.measurements.shoulders, measureDual)
+      + inputRow('Inseam ('+measureLabel+')', 'measurements.inseam', 'number', p.measurements && p.measurements.inseam, measureDual)
+      + '</div>'
+      + selectRow('Complexion', 'complexion', COMPLEXIONS, p.complexion)
+      + selectRow('Body Shape', 'bodyShape', BODY_SHAPES, p.bodyShape)
+      + selectRow('Hair Type', 'hairType', HAIR_TYPES, p.hairType)
+      + selectRow('Hair Style', 'hairStyle', HAIR_STYLES, p.hairStyle)
+      + selectRow('Eye Color', 'eyeColor', EYE_COLORS, p.eyeColor);
+  } else if (step === 1) {
+    body = inputRow('Allergies (comma separated)', 'allergies', 'text', (p.allergies||[]).join(', '))
+      + inputRow('Injuries / limitations (comma separated)', 'injuries', 'text', (p.injuries||[]).join(', '));
+  } else if (step === 2) {
+    body = selectRow('Activity Level', 'activityLevel', ACTIVITY_LEVELS, p.activityLevel)
+      + selectRow('Occupation Type', 'occupationType', ['sedentary','active'], p.occupationType)
+      + inputRow('Sleep (hours/night)', 'sleepHours', 'number', p.sleepHours)
+      + selectRow('Diet Type', 'dietType', DIET_TYPES, p.dietType)
+      + '<label>Equipment you have access to</label>'
+      + '<div class="grid2">'
+      + EQUIPMENT_TYPES.filter(eq => eq !== 'none').map(eq =>
+          '<label class="row" style="gap:8px;"><input type="checkbox" name="equipment" value="'+eq+'" '+((p.equipment||[]).includes(eq)?'checked':'')+'> <span>'+labelize(eq)+'</span></label>'
+        ).join('')
+      + '</div>'
+      + '<p class="muted" style="margin-top:4px;">Used to tailor which exercises Generate Plan recommends by default.</p>';
+  } else {
+    body = selectRow('Primary Goal', 'goals', GOALS, (p.goals||[])[0])
+      + inputRow('Target date (optional)', 'goalTargetDate', 'date', p.goalTargetDate ? String(p.goalTargetDate).slice(0,10) : '');
+  }
+
+  return '<div class="step-icon">'+ICONS[meta.icon]+'</div>'
+    + '<h1 class="center">'+meta.title+'</h1>'
+    + '<p class="center">'+meta.sub+'</p>'
+    + '<div class="step-dots">'+dots+'</div>'
+    + '<form data-form="onboarding-step" data-step="'+step+'">'
+    + '<div class="card">'+body+'</div>'
+    + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+    + '<div class="row" style="justify-content:space-between;">'
+    + (step > 0 ? '<button type="button" class="secondary" data-onboarding-back>Back</button>' : '<span></span>')
+    + '<button type="submit">'+(step === ONBOARDING_STEPS.length - 1 ? 'Finish' : 'Continue')+'</button>'
+    + '</div></form>';
+};
+
+function fieldsetHtml(legend, inner){ return '<fieldset><legend>'+legend+'</legend>'+inner+'</fieldset>'; }
+
+function dualUnitHint(value, dualUnit){
+  if (value === null || value === undefined || value === '') return '';
+  const val = Number(value);
+  if (isNaN(val)) return '';
+  let converted, label;
+  if (dualUnit === 'cm-to-in') { converted = val / 2.54; label = 'in'; }
+  else if (dualUnit === 'in-to-cm') { converted = val * 2.54; label = 'cm'; }
+  else if (dualUnit === 'kg-to-lb') { converted = val / 0.45359237; label = 'lb'; }
+  else if (dualUnit === 'lb-to-kg') { converted = val * 0.45359237; label = 'kg'; }
+  else return '';
+  return '≈ ' + converted.toFixed(1) + ' ' + label;
+}
+
+function inputRow(label, name, type, value, dualUnit){
+  const hintId = dualUnit ? 'hint-'+name.replace(/\./g,'-') : null;
+  return '<label>'+label+'<input type="'+type+'" name="'+name+'" value="'+(value===null||value===undefined?'':escapeHtml(String(value)))+'"'
+    + (dualUnit ? ' data-dual-unit="'+dualUnit+'" data-hint-id="'+hintId+'"' : '') + '>'
+    + (dualUnit ? '<span class="muted" id="'+hintId+'" style="display:block;margin-top:3px;">'+dualUnitHint(value, dualUnit)+'</span>' : '')
+    + '</label>';
+}
+function selectRow(label, name, options, value){
+  return '<label>'+label+'<select name="'+name+'"><option value="">—</option>'
+    + options.map(o => '<option value="'+o+'" '+(o===value?'selected':'')+'>'+labelize(o)+'</option>').join('')
+    + '</select></label>';
+}
+
+document.addEventListener('input', (e) => {
+  const dual = e.target.getAttribute && e.target.getAttribute('data-dual-unit');
+  if (!dual) return;
+  const hint = document.getElementById(e.target.getAttribute('data-hint-id'));
+  if (hint) hint.textContent = dualUnitHint(e.target.value, dual);
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-onboarding-back]')) { state.onboardingStep = Math.max(0, state.onboardingStep - 1); render(); }
+});
+
+document.addEventListener('change', async (e) => {
+  if (e.target.id !== 'face-photo-input' || !e.target.files[0]) return;
+  const label = document.getElementById('face-photo-label');
+  const prevText = label.textContent;
+  label.textContent = 'Uploading…';
+  const fd = new FormData();
+  fd.append('photo', e.target.files[0]);
+  try {
+    const r = await api('/profile/face-photo', { method:'POST', body: fd });
+    state.data.profile = r.profile;
+    render();
+  } catch (err) {
+    label.textContent = prevText;
+    alert(err.message);
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="onboarding-step"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  const payload = { measurements: state.data.profile.measurements || {} };
+  if (state.onboardingStep === 2) payload.equipment = [];
+  for (const [key, val] of fd.entries()) {
+    if (key === 'allergies' || key === 'injuries') payload[key] = val.split(',').map(s=>s.trim()).filter(Boolean);
+    else if (key === 'goals') payload.goals = val ? [val] : [];
+    else if (key === 'equipment') payload.equipment.push(val);
+    else if (key.startsWith('measurements.')) payload.measurements[key.split('.')[1]] = val ? Number(val) : null;
+    else if (key === 'height' || key === 'weight' || key === 'sleepHours') payload[key] = val ? Number(val) : null;
+    else payload[key] = val || null;
+  }
+  const isLast = state.onboardingStep === ONBOARDING_STEPS.length - 1;
+  try {
+    const r = await api('/profile', { method:'PUT', body: JSON.stringify(payload) });
+    state.data.profile = r.profile; state.data.bmi = r.bmi; state.data.fitnessScore = r.fitnessScore; state.error = null;
+    if (isLast) go('dashboard');
+    else { state.onboardingStep++; render(); }
+  } catch (err) { state.error = err.message; render(); }
+});
+
+/* ─── DASHBOARD ─────────────────────────────────────────────────────────── */
+
+// ── Fitness Score urgency (Designer) ────────────────────────────────────────
+// Below ~general-fitness threshold, the panel turns amber; a critically low
+// score turns red and gently pulses — sedentary behavior and unmanaged BMI
+// are well-documented cardiovascular/metabolic risk factors (WHO/CDC), so the
+// UI should read as urgent, not decorative.
+function fitnessScoreTier(overall){
+  if (overall < 2.0) return 'critical';
+  if (overall < 3.5) return 'low';
+  return 'good';
+}
+function fitnessScoreCopy(tier){
+  if (tier === 'critical') return {
+    headline: '⚠️ Your fitness score is critically low',
+    body: 'Sustained inactivity and unmanaged body weight at this level are linked to significantly higher long-term risk of cardiovascular disease, type 2 diabetes, and reduced life expectancy. Getting moving this week matters.',
+  };
+  if (tier === 'low') return {
+    headline: 'Below the recommended activity level',
+    body: 'You\'re under the general physical-activity guideline (~3+ sessions/week). Small, consistent sessions this week will move the needle.',
+  };
+  return {
+    headline: 'You\'re on track',
+    body: 'Keep up your current consistency — it\'s associated with meaningfully lower long-term health risk.',
+  };
+}
+function fitnessCardHtml(fs){
+  if (!fs) return '<div class="card"><h3>Fitness</h3><p>Generate a workout plan tailored to your profile.</p><button class="block" data-nav="fitness">Go to Fitness</button></div>';
+  const tier = fitnessScoreTier(fs.overall);
+  const copy = fitnessScoreCopy(tier);
+  const scoreColor = tier === 'critical' ? 'var(--danger)' : tier === 'low' ? 'var(--accent-2)' : 'var(--accent)';
+  return '<div class="card fitness-score-card tier-'+tier+'">'
+    + '<div class="row" style="justify-content:space-between;align-items:flex-start;">'
+    + '<h3 style="margin-bottom:0;">Fitness Score</h3>'
+    + '<button class="icon-btn" data-action="fitness-score-info" aria-label="Score breakdown">'+ICONS.info+'</button>'
+    + '</div>'
+    + '<div class="row" style="align-items:baseline;gap:8px;margin-top:4px;"><span style="font-size:36px;font-weight:700;color:'+scoreColor+';">'+fs.overall.toFixed(1)+'</span><span class="muted">/ 5.0</span></div>'
+    + '<p style="margin-top:6px;font-weight:'+(tier==='good'?'400':'600')+';'+(tier!=='good'?'color:'+scoreColor+';':'')+'">'+(tier!=='good'?copy.headline:copy.body)+'</p>'
+    + (tier !== 'good' ? '<p class="muted" style="margin-top:2px;">'+copy.body+'</p>' : '')
+    + '<div class="row" style="margin-top:8px;">'
+    + '<span class="pill">Body: '+fs.bmiScore.toFixed(1)+'</span>'
+    + '<span class="pill">Consistency: '+fs.consistencyScore.toFixed(1)+'</span>'
+    + '<span class="pill">Goal pace: '+fs.goalScore.toFixed(1)+'</span>'
+    + '</div>'
+    + '<p class="muted" style="margin-top:8px;">'+fs.sessionsLast7+' workout'+(fs.sessionsLast7===1?'':'s')+' logged this week.</p>'
+    + '<div style="margin-top:12px;"><button class="block" data-nav="fitness">Go to Fitness</button></div>'
+  + '</div>';
+}
+function fitnessScoreInfoModalHtml(fs){
+  const tier = fitnessScoreTier(fs.overall);
+  const copy = fitnessScoreCopy(tier);
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Fitness Score Breakdown</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<p style="font-weight:600;'+(tier!=='good'?'color:'+(tier==='critical'?'var(--danger)':'var(--accent-2)')+';':'')+'">'+copy.headline+'</p>'
+    + '<p class="muted">'+copy.body+'</p>'
+    + '<div class="list-item"><span>Body (BMI category)</span><b>'+fs.bmiScore.toFixed(1)+' / 5.0</b></div>'
+    + '<p class="muted" style="margin:2px 0 10px;">Based on the WHO BMI classification — 18.5–24.9 ("normal weight") scores highest; categories further from that range score lower, reflecting elevated long-term health risk.</p>'
+    + '<div class="list-item"><span>Consistency (last 7 days)</span><b>'+fs.consistencyScore.toFixed(1)+' / 5.0</b></div>'
+    + '<p class="muted" style="margin:2px 0 10px;">Benchmarked against ACSM/CDC physical-activity guidance of roughly 3+ sessions per week for general fitness. You logged '+fs.sessionsLast7+' this week.</p>'
+    + '<div class="list-item"><span>Goal pace</span><b>'+fs.goalScore.toFixed(1)+' / 5.0</b></div>'
+    + '<p class="muted" style="margin:2px 0 10px;">Compares sessions actually logged since you set your goal against the expected pace for your activity level and target date.</p>'
+    + '<p class="muted">Weighted: 40% body + 40% consistency + 20% goal pace, rounded to one decimal. Scores below 1.0 are shown as-is rather than floored.</p>'
+    + '</div></div>';
+}
+
+VIEWS['dashboard'] = () => {
+  const p = state.data.profile || {};
+  return '<h1>Hey, '+escapeHtml(session.name)+'</h1>'
+  + '<div class="card">'
+    + '<h3>Your Stats</h3>'
+    + '<div class="row"><span class="pill">BMI: '+(state.data.bmi ?? '—')+'</span>'
+    + '<span class="pill">Activity: '+labelize(p.activityLevel||'—')+'</span>'
+    + '<span class="pill">Goal: '+labelize((p.goals||[])[0]||'—')+'</span></div>'
+    + '<div style="margin-top:12px;"><button class="secondary" data-action="edit-profile">Edit Profile</button></div>'
+  + '</div>'
+  + fitnessCardHtml(state.data.fitnessScore)
+  + '<div class="card"><h3>Fashion</h3><p>Wardrobe, style tips, and AI outfit ideas.</p><button class="block" data-nav="fashion">Go to Fashion</button></div>';
+};
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-action="edit-profile"]')) { state.onboardingStep = 0; go('onboarding'); }
+  if (e.target.closest('[data-action="fitness-score-info"]')) { state.modal = { type: 'fitness-score-info', fs: state.data.fitnessScore }; render(); }
+});
+
+/* ─── EXERCISE DETAIL MODAL ─────────────────────────────────────────────── */
+
+function modalHtml(){
+  if (!state.modal) return '';
+  if (state.modal.type === 'exercise') return exerciseModalHtml(state.modal.exercise);
+  if (state.modal.type === 'edit-exercise') return editExerciseModalHtml(state.modal.exercise);
+  if (state.modal.type === 'generate-outfit') return generateOutfitModalHtml();
+  if (state.modal.type === 'generate-plan-options') return generatePlanOptionsModalHtml();
+  if (state.modal.type === 'manual-log') return manualLogModalHtml();
+  if (state.modal.type === 'workout-summary') return workoutSummaryModalHtml(state.modal);
+  if (state.modal.type === 'fitness-score-info') return fitnessScoreInfoModalHtml(state.modal.fs);
+  if (state.modal.type === 'edit-wardrobe-item') return editWardrobeItemModalHtml(state.modal.item);
+  return '';
+}
+
+function youtubeEmbedId(url){
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{6,})/);
+  return m ? m[1] : null;
+}
+
+function exerciseModalHtml(ex){
+  const ytId = youtubeEmbedId(ex.video);
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;align-items:flex-start;">'
+    + '<h2>'+escapeHtml(ex.name)+'</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + (ex.image ? '<img class="thumb-lg" src="'+ex.image+'" alt="'+escapeHtml(ex.name)+'">' : '')
+    + '<div class="row" style="margin:12px 0;">'
+    + '<span class="pill">'+labelize(ex.muscleGroup)+'</span>'
+    + '<span class="pill">'+labelize(ex.equipment)+'</span>'
+    + (ex.homeFriendly ? '<span class="pill accent">Home Workout</span>' : '')
+    + '</div>'
+    + '<p>'+escapeHtml(ex.instructions || 'No instructions yet.')+'</p>'
+    + (ytId ? '<div style="position:relative;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;margin-top:8px;">'
+        + '<iframe src="https://www.youtube.com/embed/'+ytId+'" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allowfullscreen loading="lazy"></iframe></div>'
+      : (ex.video ? '<p><a href="'+escapeHtml(ex.video)+'" target="_blank" rel="noopener">Watch reference video →</a></p>' : ''))
+    + '</div></div>';
+}
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('[data-exercise-id]');
+  if (!link) return;
+  const ex = (state.data.exercises || []).find(x => x.id === link.getAttribute('data-exercise-id'));
+  if (ex) { state.modal = { type: 'exercise', exercise: ex }; render(); }
+});
+
+/* ─── FITNESS ───────────────────────────────────────────────────────────── */
+
+// Complexity heuristic (Designer): bodyweight-only movements are easiest to
+// learn safely, then dumbbell/machine/cable work, then bar-based lifts (pull-ups
+// need real relative strength) and free-weight barbell lifts, which carry the
+// highest technical/injury-risk bar.
+const EQUIPMENT_COMPLEXITY = { none: 1, dumbbells: 2, machine: 2, cableMachine: 2, bike: 2, treadmill: 2, pullupBar: 3, barbell: 4 };
+function isRecommendedExercise(ex){
+  const p = state.data.profile || {};
+  const injuries = p.injuries || [];
+  if (injuries.includes(ex.muscleGroup)) return false;
+  const equipment = p.equipment;
+  if (Array.isArray(equipment) && equipment.length && ex.equipment !== 'none' && !equipment.includes(ex.equipment)) return false;
+  return true;
+}
+function sortExercises(list){
+  const sorted = list.slice();
+  if (state.exerciseSort === 'alphabetical') sorted.sort((a,b) => a.name.localeCompare(b.name));
+  else if (state.exerciseSort === 'complexity') sorted.sort((a,b) => (EQUIPMENT_COMPLEXITY[a.equipment]||2) - (EQUIPMENT_COMPLEXITY[b.equipment]||2) || a.name.localeCompare(b.name));
+  else sorted.sort((a,b) => (isRecommendedExercise(b) - isRecommendedExercise(a)) || a.name.localeCompare(b.name));
+  return sorted;
+}
+
+VIEWS['fitness'] = () => {
+  const plan = state.data.plan;
+  return '<h1>Fitness</h1>'
+  + (state.activeWorkout ? activeWorkoutHtml() : startWorkoutCardHtml())
+  + '<div class="card row" style="justify-content:space-between;">'
+    + '<div><h3 style="margin-bottom:2px;">Weekly Plan</h3><p class="muted" style="margin:0;">'+(plan ? 'Generated '+new Date(plan.generatedAt).toLocaleDateString() : 'No plan yet.')+'</p></div>'
+    + '<button data-action="open-generate-plan">'+(plan ? 'Regenerate' : 'Generate Plan')+'</button>'
+  + '</div>'
+  + (plan ? planHtml(plan) : '')
+  + '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;">'
+    + '<h3 style="margin-bottom:0;">Exercise Library</h3>'
+    + '<select id="exercise-sort" class="sort-select">'
+      + '<option value="recommended"'+(state.exerciseSort==='recommended'?' selected':'')+'>Recommended first</option>'
+      + '<option value="alphabetical"'+(state.exerciseSort==='alphabetical'?' selected':'')+'>Alphabetical</option>'
+      + '<option value="complexity"'+(state.exerciseSort==='complexity'?' selected':'')+'>Complexity</option>'
+    + '</select>'
+  + '</div>'
+    + sortExercises(state.data.exercises||[]).map(ex => '<div class="list-item list-item-clickable" data-exercise-id="'+ex.id+'">'
+      + '<span class="row" style="gap:10px;"><img class="thumb" src="'+(ex.image||'')+'" onerror="this.style.visibility=\'hidden\'"><span>'+escapeHtml(ex.name)+'</span></span>'
+      + (ex.homeFriendly ? '<span class="pill accent">Home</span>' : '<span class="pill">'+labelize(ex.equipment)+'</span>')
+      + '</div>').join('')
+  + '</div>'
+  + historyHtml(state.data.history||[]);
+};
+
+// ── Motivation: streak + adaptive encouragement (Innovator) ────────────────
+// A "streak" is consecutive calendar days with at least one logged workout,
+// counting backward from today (or yesterday, if today has no workout yet
+// so a mid-day visit doesn't reset a streak that's still alive).
+function computeStreak(history){
+  const days = new Set();
+  (history||[]).forEach(h => { const d = new Date(h.date); if (!isNaN(d)) days.add(d.toISOString().slice(0,10)); });
+  const cursor = new Date();
+  if (!days.has(cursor.toISOString().slice(0,10))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (days.has(cursor.toISOString().slice(0,10))) { streak++; cursor.setDate(cursor.getDate() - 1); }
+  return streak;
+}
+function motivationMessage(streak, historyLen){
+  if (streak >= 7) return '🔥 '+streak+'-day streak — you\'re unstoppable!';
+  if (streak >= 3) return '🔥 '+streak+'-day streak. Keep it going!';
+  if (streak >= 1) return '💪 Nice, back-to-back days. Keep the momentum.';
+  if (historyLen > 0) return 'Every session counts — let\'s get moving today.';
+  return 'Your first workout starts your streak. Let\'s go!';
+}
+
+// ── Calorie estimate (Designer/Innovator, non-AI) ───────────────────────────
+// Uses MET (Metabolic Equivalent of Task) values from the Compendium of
+// Physical Activities (Ainsworth et al., 2011) and the standard energy
+// expenditure formula: kcal = MET x weight(kg) x duration(hours).
+function profileWeightKg(){
+  const p = state.data.profile || {};
+  if (!p.weight) return 70; // reasonable population-average fallback pre-onboarding
+  return p.weightUnit === 'lb' ? p.weight * 0.45359237 : p.weight;
+}
+function estimateExerciseDurationMin(ex, reps){
+  if (ex.muscleGroup === 'cardio') return 15;
+  const repSeconds = 3, restSeconds = 60;
+  return ((ex.defaultSets||3) * ((reps||ex.defaultReps||10) * repSeconds + restSeconds)) / 60;
+}
+function estimateExerciseCalories(ex){
+  const met = ex.met || 5;
+  const minutes = estimateExerciseDurationMin(ex);
+  return Math.round(met * profileWeightKg() * (minutes/60));
+}
+function estimateSetCalories(ex, reps){
+  const met = ex ? (ex.met || 5) : 5;
+  const minutes = ((reps||10) * 3 + 45) / 60;
+  return met * profileWeightKg() * (minutes/60);
+}
+
+function startWorkoutCardHtml(){
+  const history = state.data.history || [];
+  const streak = computeStreak(history);
+  return '<div class="card center">'
+    + (streak > 0 ? '<div class="pill accent" style="margin-bottom:10px;">🔥 '+streak+'-day streak</div>' : '')
+    + '<h3 style="text-transform:none;color:var(--text);font-size:16px;">Ready to train?</h3>'
+    + '<p>'+escapeHtml(motivationMessage(streak, history.length))+'</p>'
+    + '<div class="row" style="justify-content:center;">'
+    + '<button data-action="start-workout">'+ICONS.play+' Start Workout</button>'
+    + '<button class="secondary" data-action="open-manual-log">Log Manually</button>'
+    + '</div></div>';
+}
+
+function manualLogModalHtml(){
+  const exercises = state.data.exercises || [];
+  const weightUnit = (state.data.settings && state.data.settings.weightUnits) === 'lb' ? 'lb' : 'kg';
+  const today = new Date().toISOString().slice(0,10);
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Log a Workout</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<form data-form="manual-log" class="col">'
+    + '<label>Exercise<select name="exerciseId" required><option value="">—</option>'
+      + exercises.map(ex => '<option value="'+ex.id+'">'+escapeHtml(ex.name)+'</option>').join('')
+    + '</select></label>'
+    + '<div class="grid2">'
+    + inputRow('Sets','sets','number','3')
+    + inputRow('Reps','reps','number','10')
+    + '</div>'
+    + inputRow('Weight ('+weightUnit+', optional)','weight','number','')
+    + '<label>Date<input type="date" name="date" value="'+today+'" max="'+today+'"></label>'
+    + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+    + '<button class="block" type="submit">Save</button>'
+    + '</form></div></div>';
+}
+
+function generatePlanOptionsModalHtml(){
+  const m = state.modal;
+  const exercises = state.data.exercises || [];
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Generate Plan</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<label class="row" style="gap:8px;margin-bottom:10px;"><input type="checkbox" id="generate-plan-home-only" '+(m.homeOnly?'checked':'')+'> <span>Home workouts only</span></label>'
+    + (m.selected === null
+        ? '<p class="muted">Loading recommendations…</p>'
+        : '<p class="muted" style="margin-bottom:10px;">Checked = recommended for your profile. Calories are estimated from your weight and each exercise\'s MET (metabolic equivalent) research value — tap to include or exclude.</p>'
+          + '<div style="max-height:40vh;overflow-y:auto;">'
+          + exercises.map(ex => '<label class="list-item" style="cursor:pointer;">'
+              + '<span class="row" style="gap:10px;"><input type="checkbox" data-plan-ex="'+ex.id+'" '+(m.selected[ex.id]?'checked':'')+'><span>'+escapeHtml(ex.name)+' <span class="pill">'+labelize(ex.muscleGroup)+'</span></span></span>'
+              + '<span class="muted">~'+estimateExerciseCalories(ex)+' kcal</span>'
+            + '</label>').join('')
+          + '</div>')
+    + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+    + '<button class="block" style="margin-top:14px;" data-action="confirm-generate-plan" '+(m.selected===null?'disabled':'')+'>Generate Plan</button>'
+    + '</div></div>';
+}
+
+function workoutSummaryModalHtml(m){
+  return '<div class="overlay"><div class="sheet center">'
+    + '<div class="step-icon">'+ICONS.flag+'</div>'
+    + '<h2>Workout complete!</h2>'
+    + '<p>'+m.totalSets+' set'+(m.totalSets===1?'':'s')+' logged in '+formatElapsed(m.durationSeconds*1000)+' — about '+m.calories+' kcal burned.</p>'
+    + (m.streak > 1 ? '<p class="pill accent">🔥 '+m.streak+'-day streak</p>' : '')
+    + '<button class="block" data-close-modal>Nice!</button>'
+    + '</div></div>';
+}
+
+function todaysWorkoutExercises(){
+  if (state.data.plan) {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const day = state.data.plan.days.find(d => d.day === today) || state.data.plan.days[0];
+    if (day) return day.exercises.map(ex => ({ id: ex.exerciseId, name: ex.name }));
+  }
+  return (state.data.exercises||[]).slice(0, 6).map(ex => ({ id: ex.id, name: ex.name }));
+}
+
+function exerciseWorkoutState(exerciseId){
+  const aw = state.activeWorkout;
+  if (!aw.exerciseState[exerciseId]) aw.exerciseState[exerciseId] = { reps: 10, weight: 0, setsLogged: 0 };
+  return aw.exerciseState[exerciseId];
+}
+
+function activeWorkoutHtml(){
+  const weightUnit = (state.data.settings && state.data.settings.weightUnits) === 'lb' ? 'lb' : 'kg';
+  const exercises = todaysWorkoutExercises();
+  return '<div class="workout-bar"><div><div class="workout-timer-label">Workout in progress</div><div class="workout-timer" id="workout-timer">00:00</div></div>'
+    + '<button data-action="finish-workout">'+ICONS.flag+' Finish</button></div>'
+    + exercises.map(ex => {
+      const st = exerciseWorkoutState(ex.id);
+      return '<div class="workout-exercise">'
+        + '<div class="workout-exercise-head"><span class="workout-exercise-name">'+escapeHtml(ex.name)+'</span>'
+        + (st.setsLogged ? '<span class="pill accent">'+st.setsLogged+' set'+(st.setsLogged>1?'s':'')+' logged</span>' : '<span class="muted">No sets yet</span>')
+        + '</div>'
+        + '<div class="workout-controls">'
+        + stepperHtml(ex.id, 'reps', st.reps, 'reps')
+        + stepperHtml(ex.id, 'weight', st.weight, weightUnit)
+        + '<button class="secondary" data-log-set="'+ex.id+'">Log Set</button>'
+        + '</div></div>';
+    }).join('');
+}
+
+function stepperHtml(exerciseId, field, value, unitLabel){
+  return '<div class="stepper" data-stepper-exercise="'+exerciseId+'" data-stepper-field="'+field+'">'
+    + '<button type="button" data-stepper-dec>−</button>'
+    + '<span class="stepper-value">'+value+'<br><span class="unit">'+unitLabel+'</span></span>'
+    + '<button type="button" data-stepper-inc>+</button>'
+    + '</div>';
+}
+
+let workoutTimerHandle = null;
+function formatElapsed(ms){
+  const totalSec = Math.max(0, Math.floor(ms/1000));
+  const m = Math.floor(totalSec/60), s = totalSec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function startWorkoutTimer(){
+  stopWorkoutTimer();
+  workoutTimerHandle = setInterval(() => {
+    if (!state.activeWorkout) { stopWorkoutTimer(); return; }
+    const el = document.getElementById('workout-timer');
+    if (el) el.textContent = formatElapsed(Date.now() - state.activeWorkout.startedAt);
+  }, 1000);
+}
+function stopWorkoutTimer(){ if (workoutTimerHandle) { clearInterval(workoutTimerHandle); workoutTimerHandle = null; } }
+
+function startWorkout(){
+  state.activeWorkout = { startedAt: Date.now(), sessionId: Date.now().toString(36), exerciseState: {}, loggedSets: [] };
+  startWorkoutTimer();
+  render();
+}
+
+async function finishWorkout(){
+  const aw = state.activeWorkout;
+  if (!aw) return;
+  stopWorkoutTimer();
+  const durationSeconds = Math.round((Date.now() - aw.startedAt) / 1000);
+  for (const entry of aw.loggedSets) {
+    await api('/fitness/history', { method:'POST', body: JSON.stringify(Object.assign({}, entry, { sessionId: aw.sessionId, durationSeconds })) });
+  }
+  const totalSets = aw.loggedSets.length;
+  const calories = Math.round(aw.loggedSets.reduce((sum, entry) => {
+    const ex = (state.data.exercises||[]).find(x => x.id === entry.exerciseId);
+    return sum + estimateSetCalories(ex, entry.reps);
+  }, 0));
+  state.activeWorkout = null;
+  const [histRes, profRes] = await Promise.all([api('/fitness/history'), api('/profile')]);
+  state.data.history = histRes.history;
+  state.data.fitnessScore = profRes.fitnessScore;
+  const streak = computeStreak(state.data.history);
+  state.modal = { type: 'workout-summary', totalSets, calories, durationSeconds, streak };
+  render();
+}
+
+function planHtml(plan){
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  return (plan.homeOnly ? '<div class="row" style="margin-bottom:6px;"><span class="pill accent">Home only</span></div>' : '')
+    + plan.days.map(d => {
+      const isToday = d.day === today;
+      return '<div class="plan-day'+(isToday?' today':'')+'">'
+        + '<div class="plan-day-header"><span class="plan-day-name">'+d.day+(isToday?' <span class="plan-day-today-badge">Today</span>':'')+'</span><span class="pill accent">'+d.focus+'</span></div>'
+        + '<div class="plan-day-body">'
+        + d.exercises.map(ex => '<div class="list-item"><span class="exercise-link" data-exercise-id="'+ex.exerciseId+'">'+escapeHtml(ex.name)+'</span><span class="pill">'+ex.sets+' × '+ex.reps+'</span></div>').join('')
+        + '</div></div>';
+    }).join('');
+}
+
+function historyHtml(history){
+  if (!history.length) return '';
+  const nameOf = (id) => { const ex = (state.data.exercises||[]).find(x => x.id === id); return ex ? ex.name : id; };
+  const sessions = {}; const loose = [];
+  history.slice().reverse().forEach(h => { if (h.sessionId) (sessions[h.sessionId] = sessions[h.sessionId] || []).push(h); else loose.push(h); });
+  const sessionRows = Object.values(sessions).slice(0, 6).map(entries => {
+    const dur = entries[0].durationSeconds;
+    const names = [...new Set(entries.map(e => nameOf(e.exerciseId)))];
+    return '<div class="list-item" style="flex-direction:column;align-items:flex-start;gap:4px;">'
+      + '<div class="row" style="justify-content:space-between;width:100%;"><b>Workout</b><span class="muted">'+new Date(entries[0].date).toLocaleDateString()+(dur?' · '+Math.max(1,Math.round(dur/60))+' min':'')+'</span></div>'
+      + '<span class="muted">'+entries.length+' sets — '+names.join(', ')+'</span>'
+    + '</div>';
+  }).join('');
+  const looseRows = loose.slice(0, 10).map(h =>
+    '<div class="list-item"><span>'+escapeHtml(nameOf(h.exerciseId))+(h.reps?' — '+h.reps+' reps'+(h.weight?' @ '+h.weight:''):'')+'</span><span class="muted">'+new Date(h.date).toLocaleDateString()+'</span></div>'
+  ).join('');
+  return '<div class="card"><h3>Recent History</h3>'+sessionRows+looseRows+'</div>';
+}
+
+async function loadFitnessView(){
+  const [exRes, planRes, histRes] = await Promise.all([
+    api('/exercises'), api('/fitness/plan'), api('/fitness/history')
+  ]);
+  state.data.exercises = exRes.exercises;
+  state.data.plan = planRes.plan;
+  state.data.history = histRes.history;
+  render();
+}
+
+async function loadRecommendedExercises(homeOnly){
+  const r = await api('/fitness/plan/recommended-exercises?homeOnly='+homeOnly);
+  if (!state.modal || state.modal.type !== 'generate-plan-options') return;
+  state.modal.selected = {};
+  (state.data.exercises||[]).forEach(ex => { state.modal.selected[ex.id] = r.recommendedIds.includes(ex.id); });
+  render();
+}
+
+document.addEventListener('click', async (e) => {
+  if (e.target.closest('[data-action="open-generate-plan"]')) {
+    const homeOnly = !!state.homeOnly;
+    state.modal = { type: 'generate-plan-options', homeOnly, selected: null };
+    state.error = null;
+    render();
+    await loadRecommendedExercises(homeOnly);
+    return;
+  }
+  if (e.target.closest('[data-action="confirm-generate-plan"]')) {
+    const m = state.modal;
+    const includeIds = Object.keys(m.selected).filter(id => m.selected[id]);
+    if (!includeIds.length) { state.error = 'Select at least one exercise.'; render(); return; }
+    state.homeOnly = m.homeOnly;
+    const r = await api('/fitness/plan/generate', { method:'POST', body: JSON.stringify({ homeOnly: m.homeOnly, includeIds }) });
+    state.data.plan = r.plan;
+    state.modal = null; state.error = null;
+    render();
+    return;
+  }
+  if (e.target.closest('[data-action="open-manual-log"]')) { state.modal = { type: 'manual-log' }; state.error = null; render(); return; }
+  if (e.target.closest('[data-action="start-workout"]')) { startWorkout(); return; }
+  if (e.target.closest('[data-action="finish-workout"]')) { await finishWorkout(); return; }
+
+  const logBtn = e.target.closest('[data-log-set]');
+  if (logBtn) {
+    const exId = logBtn.getAttribute('data-log-set');
+    const st = exerciseWorkoutState(exId);
+    state.activeWorkout.loggedSets.push({ exerciseId: exId, sets: 1, reps: st.reps || null, weight: st.weight || null });
+    st.setsLogged++;
+    render();
+    return;
+  }
+
+  const stepBtn = e.target.closest('[data-stepper-inc],[data-stepper-dec]');
+  if (stepBtn) {
+    const wrap = stepBtn.closest('[data-stepper-exercise]');
+    const st = exerciseWorkoutState(wrap.getAttribute('data-stepper-exercise'));
+    const field = wrap.getAttribute('data-stepper-field');
+    const step = field === 'weight' ? 2.5 : 1;
+    const dir = stepBtn.hasAttribute('data-stepper-inc') ? 1 : -1;
+    st[field] = Math.max(0, Math.round((st[field] + dir * step) * 10) / 10);
+    render();
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'exercise-sort') { state.exerciseSort = e.target.value; render(); }
+});
+
+document.addEventListener('change', async (e) => {
+  if (e.target.id === 'generate-plan-home-only' && state.modal && state.modal.type === 'generate-plan-options') {
+    state.modal.homeOnly = e.target.checked;
+    state.modal.selected = null;
+    render();
+    await loadRecommendedExercises(state.modal.homeOnly);
+    return;
+  }
+  const planEx = e.target.closest('[data-plan-ex]');
+  if (planEx && state.modal && state.modal.selected) state.modal.selected[planEx.getAttribute('data-plan-ex')] = planEx.checked;
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="manual-log"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  const exerciseId = fd.get('exerciseId');
+  if (!exerciseId) { state.error = 'Pick an exercise.'; render(); return; }
+  const date = fd.get('date') ? new Date(fd.get('date')).toISOString() : new Date().toISOString();
+  await api('/fitness/history', { method:'POST', body: JSON.stringify({
+    exerciseId,
+    sets: fd.get('sets') ? Number(fd.get('sets')) : null,
+    reps: fd.get('reps') ? Number(fd.get('reps')) : null,
+    weight: fd.get('weight') ? Number(fd.get('weight')) : null,
+    date,
+  }) });
+  state.modal = null; state.error = null;
+  const histRes = await api('/fitness/history');
+  state.data.history = histRes.history;
+  render();
+});
+
+/* ─── FASHION ───────────────────────────────────────────────────────────── */
+
+const WARDROBE_CATEGORIES = ['top','bottom','outerwear','footwear','formal','activewear'];
+const COLOR_OPTIONS = ['black','white','gray','navy','blue','red','pink','purple','green','olive','yellow','orange','brown','beige','burgundy','teal','multicolor'];
+const CONDITIONS = ['new','likeNew','good','worn','fair'];
+const FITS = ['loose','fitted','exact','notFit'];
+const COLOR_HEX = {
+  black:'#111111', white:'#f5f5f5', gray:'#9a9a9a', navy:'#1e293b', blue:'#3b82f6', red:'#ef4444',
+  pink:'#f472b6', purple:'#a855f7', green:'#22c55e', olive:'#65733f', yellow:'#eab308', orange:'#f97316',
+  brown:'#8b5e3c', beige:'#d8c3a5', burgundy:'#7f1d3a', teal:'#2dd4bf',
+  multicolor:'conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)',
+  'soft pink':'#f7cad0', charcoal:'#36454f', emerald:'#10b981', rust:'#b7410e', mustard:'#e1ad01',
+  'chocolate brown':'#5a3825', coral:'#ff7f50', 'royal blue':'#4169e1', gold:'#ffd700', fuchsia:'#e11d9c',
+};
+function colorSwatchHtml(name, size){
+  size = size || 14;
+  const bg = COLOR_HEX[name] || '#888';
+  return '<span class="color-swatch" style="width:'+size+'px;height:'+size+'px;background:'+bg+';" title="'+escapeHtml(labelize(name))+'"></span>';
+}
+function colorPickerHtml(fieldName, selected){
+  return '<label>Color<div class="color-picker" data-color-field="'+fieldName+'">'
+    + COLOR_OPTIONS.map(c => '<button type="button" class="color-swatch-btn'+(c===selected?' selected':'')+'" data-color-value="'+c+'" style="background:'+(COLOR_HEX[c]||'#888')+';" title="'+labelize(c)+'"></button>').join('')
+    + '</div><input type="hidden" name="'+fieldName+'" value="'+(selected||'')+'"></label>';
+}
+
+document.addEventListener('click', (e) => {
+  const swatchBtn = e.target.closest('.color-swatch-btn');
+  if (!swatchBtn) return;
+  const picker = swatchBtn.closest('.color-picker');
+  picker.querySelectorAll('.color-swatch-btn').forEach(b => b.classList.remove('selected'));
+  swatchBtn.classList.add('selected');
+  picker.querySelector('input[type="hidden"]').value = swatchBtn.getAttribute('data-color-value');
+});
+
+function aiDisabledPlaceholder(title, blurb){
+  return '<div class="card"><h3>'+title+'</h3><p class="muted">'+blurb+'</p></div>';
+}
+
+function addWardrobeFormHtml(){
+  return '<form data-form="add-wardrobe" class="col">'
+    + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;" id="wardrobe-photo-label">Tap to add a photo (optional)</div><input type="file" name="photo" accept="image/*" style="display:none;" id="wardrobe-photo-input"></label>'
+    + '<div class="grid2">'
+    + inputRow('Item name','name','text','')
+    + selectRow('Category','category',WARDROBE_CATEGORIES,'')
+    + '</div>'
+    + colorPickerHtml('color', null)
+    + '<div class="grid2">'
+    + inputRow('Size (in)','size','text','')
+    + selectRow('Condition','condition',CONDITIONS,'')
+    + '</div>'
+    + '<div class="grid2">'
+    + selectRow('Fit','fit',FITS,'')
+    + '<label class="row" style="gap:8px;align-self:center;"><input type="checkbox" name="favorite"> <span>Favorite</span></label>'
+    + '</div>'
+    + '<div class="grid2">'
+    + inputRow('Chest (in)','measurements.chest','number','')
+    + inputRow('Waist (in)','measurements.waist','number','')
+    + inputRow('Length (in)','measurements.length','number','')
+    + inputRow('Shoulder (in)','measurements.shoulder','number','')
+    + '</div>'
+    + '<label>Remarks<textarea name="remarks" placeholder="Any notes about this item"></textarea></label>'
+    + '<button type="submit" style="margin-top:8px;">Add Item</button>'
+    + '</form>';
+}
+
+VIEWS['fashion'] = () => {
+  const rec = state.data.recommendations || {};
+  const aiOn = state.data.aiEnabled;
+  return '<h1>Fashion</h1>'
+  + '<div class="card"><h3>Recommendations</h3>'
+    + '<div class="row">'+ (rec.recommendedColors||[]).map(c=>'<span class="pill" style="display:inline-flex;align-items:center;gap:6px;">'+colorSwatchHtml(c,12)+escapeHtml(c)+'</span>').join('') +'</div>'
+    + (rec.styleTip ? '<p>'+escapeHtml(rec.styleTip)+'</p>' : '<p class="muted">Set complexion & body shape in your profile for tailored tips.</p>')
+    + (rec.wardrobeGaps && rec.wardrobeGaps.length ? '<p class="muted">Missing from wardrobe: '+rec.wardrobeGaps.map(labelize).join(', ')+'</p>' : '')
+  + '</div>'
+  + '<div class="card"><h3>Wardrobe</h3>'
+    + addWardrobeFormHtml()
+    + '<button class="secondary block" style="margin-top:12px;" data-nav="fashion-items">View All Items ('+(state.data.wardrobe||[]).length+')</button>'
+  + '</div>'
+  + (aiOn
+      ? '<div class="card"><h3>Generate Outfit</h3><p>Describe what you need and AI picks it from your wardrobe.</p>'
+        + '<button class="block" data-open-generate-outfit>Generate Outfit</button>'
+        + '<button class="secondary block" style="margin-top:10px;" data-nav="fashion-outfits">View Generated Outfits ('+(state.data.outfits||[]).length+')</button></div>'
+      : aiDisabledPlaceholder('Generate Outfit', 'AI features are currently turned off by your administrator.'))
+  + (aiOn
+      ? '<div class="card"><h3>Outfit Check</h3><p>Upload a photo of your outfit and get AI feedback.</p>'
+        + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;">Tap to upload a photo</div><input type="file" accept="image/*" style="display:none;" id="outfit-check-input"></label>'
+        + '</div>'
+      : aiDisabledPlaceholder('Outfit Check', 'AI features are currently turned off by your administrator.'))
+  + outfitChecksHtml(state.data.outfitChecks||[])
+  + (state.data.sizeGuide ? '<div class="card"><h3>Size Guide</h3><p>Estimated size: <b>'+state.data.sizeGuide.estimatedSize+'</b> (based on '+state.data.sizeGuide.basedOn+')</p></div>' : '');
+};
+
+function wardrobeTileHtml(item){
+  const score = item.aiScore != null ? Math.min(5, Math.max(1, Math.round(item.aiScore))) : null;
+  return '<div class="wardrobe-tile">'
+    + '<div class="wardrobe-tile-photo">'+(item.photo ? '<img src="'+item.photo+'">' : ICONS.camera)+'</div>'
+    + '<button class="icon-btn wardrobe-tile-edit" data-edit-item="'+item.id+'">'+ICONS.edit+'</button>'
+    + (item.favorite ? '<span class="wardrobe-tile-fav">♥</span>' : '')
+    + '<div class="wardrobe-tile-body">'
+      + '<div class="wardrobe-tile-name">'+escapeHtml(item.name)+'</div>'
+      + '<div class="row" style="gap:6px;align-items:center;margin-bottom:4px;">'
+        + (item.color ? colorSwatchHtml(item.color,14) : '')
+        + '<span class="muted" style="font-size:12px;">'+labelize(item.category)+'</span>'
+      + '</div>'
+      + (score != null ? '<span class="score-badge score-'+score+'">★ '+item.aiScore.toFixed(1)+'</span>' : '<span class="muted" style="font-size:12px;">Not scored</span>')
+    + '</div>'
+  + '</div>';
+}
+
+VIEWS['fashion-items'] = () => {
+  const items = state.data.wardrobe || [];
+  return '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px;">'
+    + '<h1 style="margin-bottom:0;">All Items</h1>'
+    + '<button class="secondary" data-nav="fashion">← Back</button>'
+  + '</div>'
+  + (items.length
+      ? '<div class="wardrobe-grid">'+items.map(wardrobeTileHtml).join('')+'</div>'
+      : '<p class="muted">No items yet — add one from the Fashion tab.</p>');
+};
+
+function editWardrobeItemModalHtml(item){
+  const aiAvailable = state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured;
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Edit Item</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<form data-form="edit-wardrobe-item" data-item-id="'+item.id+'" class="col">'
+    + (item.photo ? '<img class="thumb-lg" style="max-height:160px;" src="'+item.photo+'">' : '')
+    + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;" id="edit-item-photo-label">Replace photo (optional)</div><input type="file" name="photo" accept="image/*" style="display:none;" id="edit-item-photo-input"></label>'
+    + '<div class="grid2">'
+    + inputRow('Name','name','text',item.name)
+    + selectRow('Category','category',WARDROBE_CATEGORIES,item.category)
+    + '</div>'
+    + colorPickerHtml('color', item.color)
+    + '<div class="grid2">'
+    + inputRow('Size','size','text',item.size)
+    + selectRow('Condition','condition',CONDITIONS,item.condition)
+    + '</div>'
+    + '<div class="grid2">'
+    + selectRow('Fit','fit',FITS,item.fit)
+    + '<label class="row" style="gap:8px;align-self:center;"><input type="checkbox" name="favorite" '+(item.favorite?'checked':'')+'> <span>Favorite</span></label>'
+    + '</div>'
+    + '<div class="grid2">'
+    + inputRow('Chest (in)','measurements.chest','number',item.measurements&&item.measurements.chest)
+    + inputRow('Waist (in)','measurements.waist','number',item.measurements&&item.measurements.waist)
+    + inputRow('Length (in)','measurements.length','number',item.measurements&&item.measurements.length)
+    + inputRow('Shoulder (in)','measurements.shoulder','number',item.measurements&&item.measurements.shoulder)
+    + '</div>'
+    + '<label>Remarks<textarea name="remarks" placeholder="Any notes about this item">'+escapeHtml(item.remarks||'')+'</textarea></label>'
+    + '<label>Overall Score (1-5)<input type="number" name="aiScore" step="0.1" min="1" max="5" value="'+(item.aiScore!=null?item.aiScore:'')+'"></label>'
+    + (item.aiReason ? '<p class="muted">AI: '+escapeHtml(item.aiReason)+'</p>' : '')
+    + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+    + '<div class="row" style="justify-content:space-between;">'
+    + '<button type="submit">Save</button>'
+    + (aiAvailable ? '<button type="button" class="secondary" data-ai-fill-item="'+item.id+'">✨ AI Fill</button>' : '')
+    + '</div>'
+    + '<button type="button" class="danger block" style="margin-top:6px;" data-remove-item="'+item.id+'">Remove Item</button>'
+    + '</form></div></div>';
+}
+
+function outfitCardHtml(o){
+  const aiAvailable = state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured;
+  const score = o.score != null ? Math.min(5, Math.max(1, Math.round(o.score))) : null;
+  return '<div class="card">'
+    + '<div class="row" style="justify-content:space-between;align-items:flex-start;">'
+    + '<p class="muted" style="margin-bottom:6px;">"'+escapeHtml(o.prompt)+'"</p>'
+    + '<button class="ghost" data-delete-outfit="'+o.id+'">Delete</button></div>'
+    + '<div class="row">'+ o.items.map(i => '<span class="pill" style="display:inline-flex;align-items:center;gap:6px;">'+(i.color?colorSwatchHtml(i.color,10):'')+escapeHtml(i.name)+'</span>').join('') +'</div>'
+    + '<p style="margin-top:6px;">'+escapeHtml(o.reasoning)+'</p>'
+    + (score != null ? '<div class="row" style="margin-top:6px;"><span class="score-badge score-'+score+'">★ '+o.score.toFixed(1)+'/5</span></div>' : '')
+    + (o.aiRemarks ? '<p class="muted" style="margin-top:4px;">AI: '+escapeHtml(o.aiRemarks)+'</p>' : '')
+    + '<label style="display:block;margin-top:8px;">Your remarks<textarea data-outfit-remarks="'+o.id+'" placeholder="Notes about this outfit">'+escapeHtml(o.remarks||'')+'</textarea></label>'
+    + '<div class="row" style="margin-top:6px;">'
+    + '<button class="secondary" data-save-outfit-remarks="'+o.id+'">Save Remarks</button>'
+    + (aiAvailable ? '<button class="secondary" data-ai-fill-outfit="'+o.id+'">✨ AI Score</button>' : '')
+    + '</div>'
+  + '</div>';
+}
+
+VIEWS['fashion-outfits'] = () => {
+  const outfits = state.data.outfits || [];
+  return '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px;">'
+    + '<h1 style="margin-bottom:0;">Generated Outfits</h1>'
+    + '<button class="secondary" data-nav="fashion">← Back</button>'
+  + '</div>'
+  + (outfits.length ? outfits.slice().reverse().map(outfitCardHtml).join('') : '<p class="muted">No generated outfits yet.</p>');
+};
+
+function outfitChecksHtml(checks){
+  if (!checks.length) return '';
+  return '<div class="card"><h3>Recent Outfit Checks</h3>'
+    + checks.slice().reverse().slice(0,5).map(c => '<div class="row" style="align-items:flex-start;margin-bottom:12px;">'
+      + '<img class="thumb" style="width:60px;height:60px;" src="'+c.photo+'">'
+      + '<p style="margin:0;flex:1;">'+escapeHtml(c.feedback)+'</p>'
+      + '<button class="ghost" data-delete-outfit-check="'+c.id+'">Delete</button>'
+    + '</div>').join('')
+  + '</div>';
+}
+
+async function loadFashionView(){
+  const [recRes, wardRes, sizeRes, outfitsRes, checksRes] = await Promise.all([
+    api('/fashion/recommendations'), api('/fashion/wardrobe'), api('/fashion/size-guide'),
+    api('/fashion/outfits'), api('/fashion/outfit-checks'),
+  ]);
+  state.data.recommendations = recRes;
+  state.data.wardrobe = wardRes.wardrobe;
+  state.data.sizeGuide = sizeRes.sizeGuide;
+  state.data.outfits = outfitsRes.outfits;
+  state.data.outfitChecks = checksRes.outfitChecks;
+  render();
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'wardrobe-photo-input' && e.target.files[0]) {
+    document.getElementById('wardrobe-photo-label').textContent = e.target.files[0].name;
+  }
+});
+
+async function pollWardrobeScore(itemId, attemptsLeft){
+  if (attemptsLeft <= 0 || (state.view !== 'fashion' && state.view !== 'fashion-items')) return;
+  try {
+    const r = await api('/fashion/wardrobe/'+itemId+'/score');
+    if (r.aiScore !== null) { await loadFashionView(); return; }
+  } catch (_) {}
+  setTimeout(() => pollWardrobeScore(itemId, attemptsLeft - 1), 2500);
+}
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="add-wardrobe"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  if (!fd.get('name') || !fd.get('category')) return;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true; submitBtn.textContent = 'Adding…';
+  const r = await api('/fashion/wardrobe', { method:'POST', body: fd });
+  await loadFashionView();
+  if (state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured) pollWardrobeScore(r.item.id, 8);
+});
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-remove-item]');
+  if (btn) { state.modal = null; await api('/fashion/wardrobe/'+btn.getAttribute('data-remove-item'), { method:'DELETE' }); await loadFashionView(); return; }
+  if (e.target.closest('[data-open-generate-outfit]')) { state.modal = { type: 'generate-outfit' }; state.error = null; render(); return; }
+  const delOutfit = e.target.closest('[data-delete-outfit]');
+  if (delOutfit) { await api('/fashion/outfits/'+delOutfit.getAttribute('data-delete-outfit'), { method:'DELETE' }); await loadFashionView(); return; }
+  const delCheck = e.target.closest('[data-delete-outfit-check]');
+  if (delCheck) { await api('/fashion/outfit-checks/'+delCheck.getAttribute('data-delete-outfit-check'), { method:'DELETE' }); await loadFashionView(); return; }
+
+  const editItem = e.target.closest('[data-edit-item]');
+  if (editItem) {
+    const item = (state.data.wardrobe || []).find(i => i.id === editItem.getAttribute('data-edit-item'));
+    if (item) { state.modal = { type: 'edit-wardrobe-item', item }; state.error = null; render(); }
+    return;
+  }
+  const aiFillItem = e.target.closest('[data-ai-fill-item]');
+  if (aiFillItem) {
+    aiFillItem.disabled = true; aiFillItem.textContent = 'Analyzing…';
+    try {
+      const r = await api('/fashion/wardrobe/'+aiFillItem.getAttribute('data-ai-fill-item')+'/ai-fill', { method:'POST' });
+      const idx = state.data.wardrobe.findIndex(i => i.id === r.item.id);
+      if (idx !== -1) state.data.wardrobe[idx] = r.item;
+      if (state.modal && state.modal.type === 'edit-wardrobe-item') state.modal.item = r.item;
+      render();
+    } catch (err) {
+      state.error = err.message; render();
+    }
+    return;
+  }
+  const saveRemarks = e.target.closest('[data-save-outfit-remarks]');
+  if (saveRemarks) {
+    const id = saveRemarks.getAttribute('data-save-outfit-remarks');
+    const textarea = document.querySelector('[data-outfit-remarks="'+id+'"]');
+    await api('/fashion/outfits/'+id, { method:'PUT', body: JSON.stringify({ remarks: textarea.value }) });
+    await loadFashionView();
+    return;
+  }
+  const aiFillOutfit = e.target.closest('[data-ai-fill-outfit]');
+  if (aiFillOutfit) {
+    aiFillOutfit.disabled = true; aiFillOutfit.textContent = 'Scoring…';
+    try {
+      await api('/fashion/outfits/'+aiFillOutfit.getAttribute('data-ai-fill-outfit')+'/ai-fill', { method:'POST' });
+      await loadFashionView();
+    } catch (err) {
+      alert(err.message);
+    }
+    return;
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'edit-item-photo-input' && e.target.files[0]) {
+    document.getElementById('edit-item-photo-label').textContent = e.target.files[0].name;
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="edit-wardrobe-item"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  const r = await api('/fashion/wardrobe/'+form.getAttribute('data-item-id'), { method:'PUT', body: fd });
+  const idx = state.data.wardrobe.findIndex(i => i.id === r.item.id);
+  if (idx !== -1) state.data.wardrobe[idx] = r.item;
+  state.modal = null; state.error = null;
+  render();
+});
+
+document.addEventListener('change', async (e) => {
+  if (e.target.id !== 'outfit-check-input' || !e.target.files[0]) return;
+  const box = e.target.closest('.upload-box');
+  const label = box.querySelector('div');
+  const prevText = label.textContent;
+  label.textContent = 'Analyzing your outfit…';
+  const fd = new FormData();
+  fd.append('photo', e.target.files[0]);
+  try {
+    await api('/fashion/outfit-check', { method:'POST', body: fd });
+    await loadFashionView();
+  } catch (err) {
+    label.textContent = prevText;
+    alert(err.message);
+  }
+});
+
+function generateOutfitModalHtml(){
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Generate Outfit</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<form data-form="generate-outfit" class="col">'
+    + '<label>What do you need it for?<textarea name="prompt" placeholder="e.g. a casual outfit for a weekend brunch" required></textarea></label>'
+    + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+    + '<button class="block" type="submit" id="generate-outfit-submit">Generate</button>'
+    + '</form></div></div>';
+}
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="generate-outfit"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  const btn = document.getElementById('generate-outfit-submit');
+  btn.disabled = true; btn.textContent = 'Thinking…';
+  try {
+    await api('/fashion/generate-outfit', { method:'POST', body: JSON.stringify({ prompt: fd.get('prompt') }) });
+    state.modal = null;
+    await loadFashionView();
+  } catch (err) { state.error = err.message; render(); }
+});
+
+/* ─── SETTINGS ──────────────────────────────────────────────────────────── */
+
+const AI_PROVIDER_LABELS = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (GPT)', 'openai-compatible': 'Other (OpenAI-compatible)' };
+
+function ensureAiDraft(){
+  const s = state.data.settings || {};
+  if (!state.aiDraft) state.aiDraft = { provider: s.aiProvider || 'anthropic', apiKey: '', baseUrl: s.aiBaseUrl || '', model: s.aiModel || '' };
+  return state.aiDraft;
+}
+
+VIEWS['settings'] = () => {
+  const s = state.data.settings || {};
+  const heightUnits = s.heightUnits || 'cm';
+  const weightUnits = s.weightUnits || 'kg';
+  const measurementUnits = s.measurementUnits || 'cm';
+  const apiKeyConfigured = s.apiKeyConfigured;
+  const draft = ensureAiDraft();
+  return '<h1>Settings</h1>'
+  + '<div class="card"><h3>Units</h3>'
+    + '<label>Height</label>'
+    + '<div class="row" style="margin-bottom:12px;">'
+    + '<button class="'+(heightUnits==='cm'?'':'secondary')+'" data-set-height-units="cm">Centimeters</button>'
+    + '<button class="'+(heightUnits==='in'?'':'secondary')+'" data-set-height-units="in">Inches</button>'
+    + '</div>'
+    + '<label>Weight</label>'
+    + '<div class="row" style="margin-bottom:12px;">'
+    + '<button class="'+(weightUnits==='kg'?'':'secondary')+'" data-set-weight-units="kg">Kilograms</button>'
+    + '<button class="'+(weightUnits==='lb'?'':'secondary')+'" data-set-weight-units="lb">Pounds</button>'
+    + '</div>'
+    + '<label>Body Measurements</label>'
+    + '<div class="row">'
+    + '<button class="'+(measurementUnits==='cm'?'':'secondary')+'" data-set-measurement-units="cm">Centimeters</button>'
+    + '<button class="'+(measurementUnits==='in'?'':'secondary')+'" data-set-measurement-units="in">Inches</button>'
+    + '</div>'
+    + '<p class="muted" style="margin-top:8px;">Switching a unit automatically converts your saved values — nothing is lost.</p>'
+  + '</div>'
+  + (state.data.aiEnabled
+      ? '<div class="card"><h3>AI Features</h3>'
+        + '<p>Bring your own API key — Anthropic, OpenAI, or another OpenAI-compatible provider — to unlock outfit AI feedback, outfit generation, and wardrobe scoring.</p>'
+        + '<form data-form="ai-settings" class="col">'
+        + '<label>Provider<select name="provider" data-ai-field="provider">'
+          + Object.entries(AI_PROVIDER_LABELS).map(([v,l]) => '<option value="'+v+'" '+(draft.provider===v?'selected':'')+'>'+l+'</option>').join('')
+        + '</select></label>'
+        + '<label>API Key<input type="password" name="apiKey" data-ai-field="apiKey" value="'+escapeHtml(draft.apiKey)+'" placeholder="'+(apiKeyConfigured ? 'Key saved — enter a new one to replace it' : 'Paste your API key')+'"></label>'
+        + (draft.provider === 'openai-compatible' ? '<label>Base URL<input type="text" name="baseUrl" data-ai-field="baseUrl" value="'+escapeHtml(draft.baseUrl)+'" placeholder="https://api.example.com/v1"></label>' : '')
+        + (draft.provider !== 'anthropic' ? '<label>Model<input type="text" name="model" data-ai-field="model" value="'+escapeHtml(draft.model)+'" placeholder="'+(draft.provider==='openai' ? 'gpt-4o-mini (default)' : 'model name')+'"></label>' : '')
+        + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+        + '<div class="row">'
+        + '<button type="submit">Save AI Settings</button>'
+        + (apiKeyConfigured ? '<button type="button" class="secondary" data-clear-api-key>Remove Key</button>' : '')
+        + '</div>'
+        + '<p class="muted">'+(apiKeyConfigured ? '✓ '+AI_PROVIDER_LABELS[s.aiProvider]+' key configured.' : 'No key configured yet — AI features are disabled.')+'</p>'
+        + '</form></div>'
+      : aiDisabledPlaceholder('AI Features', 'AI features have been turned off by the administrator for all users.'))
+  + '<div class="card"><h3>Change PIN</h3>'
+    + '<button data-nav="change-pin">Change PIN</button></div>'
+  + (session.isAdmin ? adminHtml() : '')
+  + '<div class="card"><button class="secondary block" data-action="logout">Log Out</button></div>';
+};
+
+function adminHtml(){
+  const users = state.data.users || [];
+  return '<div class="card"><h3>Admin <span class="badge-admin">admin</span></h3>'
+    + users.map(u => '<div class="list-item"><span>'+escapeHtml(u.name)+(u.isAdmin?' <span class="pill">admin</span>':'')+'</span>'
+      + '<button class="secondary" data-toggle-admin="'+escapeHtml(u.name)+'" data-is-admin="'+(!u.isAdmin)+'">'+(u.isAdmin?'Revoke Admin':'Make Admin')+'</button></div>').join('')
+    + '<form data-form="add-user" class="row" style="margin-top:10px;">'
+    + '<input type="text" name="name" placeholder="New user name" required style="flex:1;">'
+    + '<button type="submit">Add User</button>'
+    + '</form>'
+    + '<div class="grid2" style="margin-top:14px;">'
+    + '<button class="secondary block" data-nav="workout-maintenance">Workout Maintenance</button>'
+    + '<button class="secondary block" data-nav="monitoring">Monitoring</button>'
+    + '</div>'
+    + '</div>';
+}
+
+async function loadSettingsView(){
+  if (session.isAdmin) {
+    const r = await api('/users');
+    state.data.users = r.users;
+    render();
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  const heightBtn = e.target.closest('[data-set-height-units]');
+  if (heightBtn) {
+    const heightUnits = heightBtn.getAttribute('data-set-height-units');
+    const r = await api('/settings/height-units', { method:'PUT', body: JSON.stringify({ heightUnits }) });
+    state.data.settings = Object.assign({}, state.data.settings, r.settings);
+    state.data.profile = r.profile; state.data.bmi = r.bmi;
+    render();
+    return;
+  }
+  const weightBtn = e.target.closest('[data-set-weight-units]');
+  if (weightBtn) {
+    const weightUnits = weightBtn.getAttribute('data-set-weight-units');
+    const r = await api('/settings/weight-units', { method:'PUT', body: JSON.stringify({ weightUnits }) });
+    state.data.settings = Object.assign({}, state.data.settings, r.settings);
+    state.data.profile = r.profile; state.data.bmi = r.bmi;
+    render();
+    return;
+  }
+  const measureUnitBtn = e.target.closest('[data-set-measurement-units]');
+  if (measureUnitBtn) {
+    const measurementUnits = measureUnitBtn.getAttribute('data-set-measurement-units');
+    const r = await api('/settings/measurement-units', { method:'PUT', body: JSON.stringify({ measurementUnits }) });
+    state.data.settings = Object.assign({}, state.data.settings, r.settings);
+    state.data.profile = r.profile;
+    render();
+    return;
+  }
+  if (e.target.closest('[data-clear-api-key]')) {
+    const r = await api('/settings/ai', { method:'PUT', body: JSON.stringify({ apiKey: null }) });
+    state.data.settings = r.settings;
+    render();
+    return;
+  }
+  const toggleBtn = e.target.closest('[data-toggle-admin]');
+  if (toggleBtn) {
+    const name = toggleBtn.getAttribute('data-toggle-admin');
+    const isAdmin = toggleBtn.getAttribute('data-is-admin') === 'true';
+    await api('/users/'+encodeURIComponent(name)+'/admin', { method:'PUT', body: JSON.stringify({ isAdmin }) });
+    await loadSettingsView();
+    return;
+  }
+  if (e.target.closest('[data-action="logout"]')) {
+    stopWorkoutTimer();
+    clearSession();
+    state = { view: 'login-select', pendingName: null, error: null, data: {}, modal: null, onboardingStep: 0, activeWorkout: null };
+    render();
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.getAttribute && e.target.getAttribute('data-ai-field') === 'provider') {
+    ensureAiDraft().provider = e.target.value;
+    render();
+  }
+});
+
+document.addEventListener('input', (e) => {
+  const field = e.target.getAttribute && e.target.getAttribute('data-ai-field');
+  if (field && field !== 'provider') ensureAiDraft()[field] = e.target.value;
+});
+
+document.addEventListener('submit', async (e) => {
+  const aiForm = e.target.closest('[data-form="ai-settings"]');
+  if (aiForm) {
+    e.preventDefault();
+    const draft = state.aiDraft;
+    const providerChanged = draft.provider !== (state.data.settings.aiProvider || 'anthropic');
+    if (providerChanged && !draft.apiKey) {
+      state.error = 'Enter an API key for the new provider.';
+      render();
+      return;
+    }
+    const body = { provider: draft.provider, baseUrl: draft.baseUrl || null, model: draft.model || null };
+    if (draft.apiKey) body.apiKey = draft.apiKey;
+    const r = await api('/settings/ai', { method:'PUT', body: JSON.stringify(body) });
+    state.data.settings = r.settings;
+    state.aiDraft = { provider: r.settings.aiProvider, apiKey: '', baseUrl: r.settings.aiBaseUrl || '', model: r.settings.aiModel || '' };
+    state.error = null;
+    render();
+    return;
+  }
+  const form = e.target.closest('[data-form="add-user"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  const name = fd.get('name');
+  if (!name) return;
+  await api('/users', { method:'POST', body: JSON.stringify({ name }) });
+  form.reset();
+  await loadSettingsView();
+});
+
+/* ─── ADMIN: WORKOUT MAINTENANCE ────────────────────────────────────────── */
+
+const MUSCLE_GROUPS = ['chest','back','legs','core','shoulders','arms','cardio'];
+
+VIEWS['workout-maintenance'] = () => {
+  return '<h1>Workout Maintenance</h1><p>Admin-only: edit the exercise library, tag Home Workouts, and add reference photos or videos.</p>'
+  + '<div class="card"><h3>Add Exercise</h3>'
+    + '<form data-form="add-exercise" class="col">'
+    + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;" id="exercise-photo-label">Reference photo (optional)</div><input type="file" name="image" accept="image/*" style="display:none;" id="exercise-photo-input"></label>'
+    + '<div class="grid2">'
+    + inputRow('Name','name','text','')
+    + selectRow('Muscle Group','muscleGroup',MUSCLE_GROUPS,'')
+    + '</div>'
+    + '<div class="grid2">'
+    + selectRow('Equipment','equipment',EQUIPMENT_TYPES,'none')
+    + inputRow('Video URL (optional)','video','text','')
+    + '</div>'
+    + '<div class="grid2">'
+    + inputRow('Default Sets','defaultSets','number','3')
+    + inputRow('Default Reps','defaultReps','number','10')
+    + '</div>'
+    + inputRow('MET (calorie intensity, 1-12 — see Compendium of Physical Activities)','met','number','5')
+    + '<label class="row" style="gap:8px;"><input type="checkbox" name="homeFriendly"> <span>Home Workout (no equipment needed)</span></label>'
+    + '<label>Instructions<textarea name="instructions" placeholder="Step-by-step instructions"></textarea></label>'
+    + '<button type="submit">Add Exercise</button>'
+    + '</form></div>'
+  + '<div class="card"><div class="row" style="justify-content:space-between;">'
+    + '<h3 style="margin-bottom:0;">Existing Exercises ('+(state.data.exercises||[]).length+')</h3>'
+    + '<button class="secondary" data-action="get-workouts">Get Workouts</button>'
+    + '</div>'
+    + (state.data.exercises||[]).map(ex => '<div class="list-item">'
+      + '<span class="row" style="gap:10px;"><img class="thumb" src="'+(ex.image||'')+'" onerror="this.style.visibility=\'hidden\'"><span>'+escapeHtml(ex.name)+' <span class="pill">'+labelize(ex.muscleGroup)+'</span>'+(ex.homeFriendly?' <span class="pill accent">Home</span>':'')+'</span></span>'
+      + '<span class="row" style="gap:6px;">'
+      + iconBtn('edit', '', 'data-edit-exercise="'+ex.id+'"')
+      + iconBtn('trash', 'danger', 'data-delete-exercise="'+ex.id+'"')
+      + '</span>'
+    + '</div>').join('')
+  + '</div>';
+};
+
+function editExerciseModalHtml(ex){
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Edit Exercise</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<form data-form="edit-exercise" data-exercise-id="'+ex.id+'" class="col">'
+    + (ex.image ? '<img class="thumb-lg" style="max-height:140px;" src="'+ex.image+'">' : '')
+    + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;" id="edit-exercise-photo-label">Replace reference photo (optional)</div><input type="file" name="image" accept="image/*" style="display:none;" id="edit-exercise-photo-input"></label>'
+    + '<div class="grid2">'
+    + inputRow('Name','name','text',ex.name)
+    + selectRow('Muscle Group','muscleGroup',MUSCLE_GROUPS,ex.muscleGroup)
+    + '</div>'
+    + '<div class="grid2">'
+    + selectRow('Equipment','equipment',EQUIPMENT_TYPES,ex.equipment)
+    + inputRow('Video URL (optional)','video','text',ex.video)
+    + '</div>'
+    + '<div class="grid2">'
+    + inputRow('Default Sets','defaultSets','number',ex.defaultSets)
+    + inputRow('Default Reps','defaultReps','number',ex.defaultReps)
+    + '</div>'
+    + inputRow('MET (calorie intensity, 1-12)','met','number',ex.met)
+    + '<label class="row" style="gap:8px;"><input type="checkbox" name="homeFriendly" '+(ex.homeFriendly?'checked':'')+'> <span>Home Workout (no equipment needed)</span></label>'
+    + '<label>Instructions<textarea name="instructions" placeholder="Step-by-step instructions">'+escapeHtml(ex.instructions||'')+'</textarea></label>'
+    + '<button type="submit">Save Changes</button>'
+    + '</form></div></div>';
+}
+
+async function loadWorkoutMaintenanceView(){
+  const r = await api('/exercises');
+  state.data.exercises = r.exercises;
+  render();
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'exercise-photo-input' && e.target.files[0]) {
+    document.getElementById('exercise-photo-label').textContent = e.target.files[0].name;
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="add-exercise"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  if (!fd.get('name') || !fd.get('muscleGroup')) return;
+  const homeChecked = form.querySelector('[name="homeFriendly"]').checked;
+  fd.set('homeFriendly', homeChecked ? 'true' : 'false');
+  await api('/exercises', { method:'POST', body: fd });
+  await loadWorkoutMaintenanceView();
+});
+
+document.addEventListener('click', async (e) => {
+  const getBtn = e.target.closest('[data-action="get-workouts"]');
+  if (getBtn) {
+    getBtn.disabled = true; getBtn.textContent = 'Syncing…';
+    try {
+      const r = await api('/exercises/sync', { method:'POST' });
+      await loadWorkoutMaintenanceView();
+      alert('Added '+r.added+', updated '+r.updated+' exercises from the source library.');
+    } catch (err) {
+      getBtn.disabled = false; getBtn.textContent = 'Get Workouts';
+      alert(err.message);
+    }
+    return;
+  }
+  const del = e.target.closest('[data-delete-exercise]');
+  if (del) {
+    await api('/exercises/'+del.getAttribute('data-delete-exercise'), { method:'DELETE' });
+    await loadWorkoutMaintenanceView();
+    return;
+  }
+  const edit = e.target.closest('[data-edit-exercise]');
+  if (edit) {
+    const ex = (state.data.exercises || []).find(x => x.id === edit.getAttribute('data-edit-exercise'));
+    if (ex) { state.modal = { type: 'edit-exercise', exercise: ex }; render(); }
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'edit-exercise-photo-input' && e.target.files[0]) {
+    document.getElementById('edit-exercise-photo-label').textContent = e.target.files[0].name;
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="edit-exercise"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  const homeChecked = form.querySelector('[name="homeFriendly"]').checked;
+  fd.set('homeFriendly', homeChecked ? 'true' : 'false');
+  await api('/exercises/'+form.getAttribute('data-exercise-id'), { method:'PUT', body: fd });
+  state.modal = null;
+  await loadWorkoutMaintenanceView();
+});
+
+/* ─── ADMIN: MONITORING (AI usage & limits) ─────────────────────────────── */
+
+VIEWS['monitoring'] = () => {
+  const m = state.data.monitoring || { aiSettings: { enabled: true, dailyTokenLimit: 0, hardTokenLimit: 0 }, users: [] };
+  const ai = m.aiSettings;
+  return '<h1>Monitoring</h1><p>Admin-only: control AI availability and watch per-user token usage.</p>'
+  + '<div class="card"><h3>AI Features</h3>'
+    + '<div class="row" style="justify-content:space-between;">'
+    + '<span>AI features are currently <b>'+(ai.enabled ? 'ON' : 'OFF')+'</b> for everyone.</span>'
+    + '<button class="'+(ai.enabled?'secondary':'')+'" data-toggle-ai="'+(!ai.enabled)+'">'+(ai.enabled?'Turn Off':'Turn On')+'</button>'
+    + '</div></div>'
+  + '<div class="card"><h3>Token Limits</h3>'
+    + '<form data-form="ai-limits" class="col">'
+    + '<div class="grid2">'
+    + inputRow('Daily limit (per user)','dailyTokenLimit','number',ai.dailyTokenLimit)
+    + inputRow('Hard limit (per user)','hardTokenLimit','number',ai.hardTokenLimit)
+    + '</div>'
+    + '<button type="submit">Save Limits</button>'
+    + '</form></div>'
+  + '<div class="card"><h3>Usage by User</h3>'
+    + (m.users.length ? m.users.map(u => '<div style="padding:10px 0;border-bottom:1px solid var(--border);">'
+        + '<div class="row" style="justify-content:space-between;">'
+        + '<span>'+escapeHtml(u.name)+'</span>'
+        + '<button class="ghost" data-reset-usage="'+escapeHtml(u.name)+'">Reset</button>'
+        + '</div>'
+        + '<div class="row">'
+        + '<span class="pill">Today: '+u.dailyTokens.toLocaleString()+' / '+ai.dailyTokenLimit.toLocaleString()+'</span>'
+        + '<span class="pill">Total: '+u.totalTokens.toLocaleString()+' / '+ai.hardTokenLimit.toLocaleString()+'</span>'
+        + '</div>'
+      + '</div>').join('') : '<p class="muted">No usage yet.</p>')
+  + '</div>';
+};
+
+async function loadMonitoringView(){
+  const r = await api('/manage/monitoring');
+  state.data.monitoring = r;
+  render();
+}
+
+document.addEventListener('click', async (e) => {
+  const toggle = e.target.closest('[data-toggle-ai]');
+  if (toggle) {
+    const enabled = toggle.getAttribute('data-toggle-ai') === 'true';
+    await api('/manage/ai-settings', { method:'PUT', body: JSON.stringify({ enabled }) });
+    await loadMonitoringView();
+    return;
+  }
+  const reset = e.target.closest('[data-reset-usage]');
+  if (reset) {
+    await api('/manage/ai-usage/'+encodeURIComponent(reset.getAttribute('data-reset-usage'))+'/reset', { method:'PUT' });
+    await loadMonitoringView();
+    return;
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="ai-limits"]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form);
+  await api('/manage/ai-settings', { method:'PUT', body: JSON.stringify({
+    dailyTokenLimit: Number(fd.get('dailyTokenLimit')),
+    hardTokenLimit: Number(fd.get('hardTokenLimit')),
+  }) });
+  await loadMonitoringView();
+});
+
+/* ─── VIEW LIFECYCLE (load data when entering a view) ──────────────────── */
+
+function bindActiveView(){
+  if (state.view === 'login-select') loadAccounts();
+  if (state.view === 'fitness') loadFitnessView();
+  if (state.view === 'fashion' || state.view === 'fashion-items' || state.view === 'fashion-outfits') loadFashionView();
+  if (state.view === 'settings') loadSettingsView();
+  if (state.view === 'workout-maintenance') loadWorkoutMaintenanceView();
+  if (state.view === 'monitoring') loadMonitoringView();
+}
+
+/* ─── PWA ───────────────────────────────────────────────────────────────── */
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
+
+// Version check — forces a full refresh (clearing Cache Storage) when the
+// server reports a different app version than what this client last saw, so
+// installed PWAs pick up new releases without a manual reinstall.
+async function checkVersion(){
+  try {
+    const r = await fetch('/info?_='+Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d.version) return;
+    const stored = localStorage.getItem('pf_app_version');
+    if (stored && stored !== String(d.version)) {
+      localStorage.setItem('pf_app_version', String(d.version));
+      if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+      location.reload(true);
+      return;
+    }
+    localStorage.setItem('pf_app_version', String(d.version));
+  } catch (_) {}
+}
+
+checkVersion().then(boot);
+</script>
+</body>
+</html>
