@@ -5,6 +5,7 @@ const fs       = require('fs');
 const multer   = require('multer');
 const Anthropic = require('@anthropic-ai/sdk').default;
 const OpenAI   = require('openai').default;
+const { toFile } = require('openai');
 
 const PORT      = process.env.PORT || 3003;
 const BASE_DIR  = path.resolve(__dirname, '..');
@@ -15,7 +16,7 @@ const AI_MODEL = 'claude-opus-4-8';
 // Bump this on every deploy that ships client-visible changes — the client
 // polls /info on load and force-refreshes (clearing all caches) when this
 // changes, so installed PWAs pick up new code without a manual reinstall.
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.6.1';
 
 // ─── DEFAULT DATA ─────────────────────────────────────────────────────────────
 
@@ -50,6 +51,22 @@ const DEFAULT_EXERCISE_LIBRARY = [
   { id: "bicycling-stationary", name: "Bicycling, Stationary", muscleGroup: "cardio", equipment: "bike", homeFriendly: false, defaultSets: 1, defaultReps: 1, met: 6.8, instructions: "Sit on the stationary bike and adjust the seat height. Select a resistance level or program and pedal at a steady cadence, using the handles to check your heart rate as needed.", image: "/images/system/exercise/bicycling-stationary.jpg", video: null },
 ];
 
+// Fallback pool shown until the first successful sync from a free public
+// quotes API (see fetchMotivationsFromApi) — and permanently, if that sync
+// never succeeds (e.g. no outbound internet from the host).
+const DEFAULT_MOTIVATIONS = [
+  "Small steps every day add up to big results.",
+  "Discipline is choosing between what you want now and what you want most.",
+  "You don't have to be extreme, just consistent.",
+  "The only bad workout is the one that didn't happen.",
+  "Progress, not perfection.",
+  "Your future self is watching you right now through memories.",
+  "Motivation gets you started. Habit keeps you going.",
+  "Every workout is progress, no matter how small.",
+  "Take care of your body — it's the only place you have to live.",
+  "A little progress each day adds up to big results.",
+];
+
 function defaultProfile() {
   return {
     completed: false,
@@ -80,10 +97,33 @@ function defaultWardrobeItemFields() {
   return {
     condition: null, fit: null, favorite: false, remarks: null,
     measurements: { chest: null, waist: null, length: null, shoulder: null },
+    photos: [],
   };
 }
 function defaultOutfitFields() {
-  return { remarks: null, aiRemarks: null, score: null };
+  return { remarks: null, aiRemarks: null, score: null, source: 'generated', photo: null, photos: [] };
+}
+
+// `photos` (array of {id, url, ai}) is the source of truth for both wardrobe
+// items and outfits; the legacy singular `photo` field is kept in sync as the
+// first photo's url so older code paths (and the mobile home-screen icon
+// cache) that still read `.photo` keep working.
+function mainPhoto(entity) { return entity.photos && entity.photos.length ? entity.photos[0].url : null; }
+function addPhoto(entity, url, opts) {
+  opts = opts || {};
+  if (!entity.photos) entity.photos = [];
+  const photo = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), url, ai: !!opts.ai };
+  entity.photos.push(photo);
+  entity.photo = mainPhoto(entity);
+  return photo;
+}
+function removePhoto(entity, photoId) {
+  if (!entity.photos) return null;
+  const idx = entity.photos.findIndex(p => p.id === photoId);
+  if (idx === -1) return null;
+  const [removed] = entity.photos.splice(idx, 1);
+  entity.photo = mainPhoto(entity);
+  return removed;
 }
 
 function defaultUser(name, opts) {
@@ -96,10 +136,12 @@ function defaultUser(name, opts) {
     settings: {
       heightUnits: 'cm', weightUnits: 'kg', measurementUnits: 'cm',
       aiProvider: 'anthropic', apiKey: null, aiBaseUrl: null, aiModel: null,
+      imageGenProvider: null, imageGenApiKey: null, imageGenModel: null,
     },
     profile: defaultProfile(),
     fitness: { plan: null, history: [] },
-    fashion: { wardrobe: [], outfitChecks: [], outfits: [] },
+    habits: [],
+    fashion: { wardrobe: [], outfitChecks: [], outfits: [], aiShoppingAdvice: null },
     aiUsage: { totalTokens: 0, dailyTokens: 0, dailyDate: null, log: [] },
   };
 }
@@ -134,6 +176,7 @@ function saveData(data) { fs.writeFileSync(DATA_PATH, JSON.stringify(data, null,
   }
   if (!data.aiSettings) { data.aiSettings = defaultAiSettings(); changed = true; }
   else for (const k of Object.keys(defaultAiSettings())) if (data.aiSettings[k] === undefined) { data.aiSettings[k] = defaultAiSettings()[k]; changed = true; }
+  if (!data.motivations) { data.motivations = { items: DEFAULT_MOTIVATIONS.slice(), syncedAt: null }; changed = true; }
   for (const u of data.users) {
     const fresh = defaultUser(u.name);
     if (u.isAdmin === undefined) { u.isAdmin = false; changed = true; }
@@ -151,17 +194,21 @@ function saveData(data) { fs.writeFileSync(DATA_PATH, JSON.stringify(data, null,
     if (!u.profile) { u.profile = fresh.profile; changed = true; }
     else for (const k of Object.keys(fresh.profile)) if (u.profile[k] === undefined) { u.profile[k] = fresh.profile[k]; changed = true; }
     if (!u.fitness) { u.fitness = fresh.fitness; changed = true; }
+    if (!u.habits) { u.habits = []; changed = true; }
     if (!u.fashion) { u.fashion = fresh.fashion; changed = true; }
     else {
       if (!u.fashion.outfitChecks) { u.fashion.outfitChecks = []; changed = true; }
       if (!u.fashion.outfits) { u.fashion.outfits = []; changed = true; }
+      if (u.fashion.aiShoppingAdvice === undefined) { u.fashion.aiShoppingAdvice = null; changed = true; }
       for (const item of u.fashion.wardrobe) {
         const freshItem = defaultWardrobeItemFields();
         for (const k of Object.keys(freshItem)) if (item[k] === undefined) { item[k] = freshItem[k]; changed = true; }
+        if (!item.photos.length && item.photo) { item.photos = [{ id: 'legacy', url: item.photo, ai: false }]; changed = true; }
       }
       for (const o of u.fashion.outfits) {
         const freshOutfit = defaultOutfitFields();
         for (const k of Object.keys(freshOutfit)) if (o[k] === undefined) { o[k] = freshOutfit[k]; changed = true; }
+        if (!o.photos.length && o.photo) { o.photos = [{ id: 'legacy', url: o.photo, ai: false }]; changed = true; }
       }
     }
     if (!u.aiUsage) { u.aiUsage = fresh.aiUsage; changed = true; }
@@ -245,12 +292,28 @@ const GOAL_REP_SCHEME = {
   endurance:    { sets: 3, reps: 18 },
   maintenance:  { sets: 3, reps: 12 },
 };
-const SPLITS = {
-  3: [{ day: 'Monday', focus: 'Full Body' }, { day: 'Wednesday', focus: 'Full Body' }, { day: 'Friday', focus: 'Full Body' }],
-  4: [{ day: 'Monday', focus: 'Upper Body' }, { day: 'Tuesday', focus: 'Lower Body' }, { day: 'Thursday', focus: 'Upper Body' }, { day: 'Friday', focus: 'Lower Body' }],
-  5: [{ day: 'Monday', focus: 'Push' }, { day: 'Tuesday', focus: 'Pull' }, { day: 'Wednesday', focus: 'Legs' }, { day: 'Friday', focus: 'Push' }, { day: 'Saturday', focus: 'Pull' }],
-  6: [{ day: 'Monday', focus: 'Push' }, { day: 'Tuesday', focus: 'Pull' }, { day: 'Wednesday', focus: 'Legs' }, { day: 'Thursday', focus: 'Push' }, { day: 'Friday', focus: 'Pull' }, { day: 'Saturday', focus: 'Legs' }],
+// Which weekdays get a session, purely a function of how many days/week the
+// activity level calls for — independent of which workout-type split the
+// user picks (that only decides the *focus* assigned to each of these days).
+const WEEKDAY_SCHEDULES = {
+  3: ['Monday', 'Wednesday', 'Friday'],
+  4: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  5: ['Monday', 'Tuesday', 'Wednesday', 'Friday', 'Saturday'],
+  6: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
 };
+
+// Workout-type split styles offered on the Generate Plan screen. `cycle` is
+// the sequence of focuses assigned to the week's training days in order,
+// wrapping around if there are more days than entries (e.g. a bro split on a
+// 3-day/week schedule just repeats the first 3 muscle groups that week).
+const WORKOUT_TYPES = {
+  fullBody:     { label: 'Full Body',              cycle: ['Full Body'] },
+  upperLower:   { label: 'Upper / Lower Split',     cycle: ['Upper Body', 'Lower Body'] },
+  pushPullLegs: { label: 'Push / Pull / Legs',       cycle: ['Push', 'Pull', 'Legs'] },
+  broSplit:     { label: 'Bro Split (one muscle/day)', cycle: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'] },
+  coreCardio:   { label: 'Core & Cardio Focus',      cycle: ['Core', 'Cardio'] },
+};
+
 const FOCUS_MUSCLE_GROUPS = {
   'Full Body': ['chest', 'back', 'legs', 'core', 'shoulders', 'arms'],
   'Upper Body': ['chest', 'back', 'shoulders', 'arms'],
@@ -258,12 +321,19 @@ const FOCUS_MUSCLE_GROUPS = {
   'Push': ['chest', 'shoulders', 'arms'],
   'Pull': ['back', 'arms'],
   'Legs': ['legs', 'core'],
+  'Chest': ['chest'],
+  'Back': ['back'],
+  'Shoulders': ['shoulders'],
+  'Arms': ['arms'],
+  'Core': ['core'],
+  'Cardio': ['cardio'],
 };
 
-function generatePlan(user, exerciseLibrary, homeOnly, includeIds) {
+function generatePlan(user, exerciseLibrary, homeOnly, includeIds, workoutTypeKey) {
   const activityLevel = user.profile.activityLevel || 'light';
   const days = ACTIVITY_DAYS[activityLevel] || 3;
-  const split = SPLITS[days] || SPLITS[3];
+  const weekdays = WEEKDAY_SCHEDULES[days] || WEEKDAY_SCHEDULES[3];
+  const workoutType = WORKOUT_TYPES[workoutTypeKey] || WORKOUT_TYPES.fullBody;
   const goal = (user.profile.goals && user.profile.goals[0]) || 'maintenance';
   const scheme = GOAL_REP_SCHEME[goal] || GOAL_REP_SCHEME.maintenance;
   const injuries = user.profile.injuries || [];
@@ -280,21 +350,22 @@ function generatePlan(user, exerciseLibrary, homeOnly, includeIds) {
         ? includeIds.includes(ex.id)
         : (!homeOnly || ex.homeFriendly) && (!hasEquipmentFilter || ex.equipment === 'none' || ownedEquipment.includes(ex.equipment))));
 
-  const scheduleDays = split.map(d => {
-    const groups = FOCUS_MUSCLE_GROUPS[d.focus] || [];
+  const scheduleDays = weekdays.map((day, idx) => {
+    const focus = workoutType.cycle[idx % workoutType.cycle.length];
+    const groups = FOCUS_MUSCLE_GROUPS[focus] || [];
     const exercises = groups.map(group => {
       const candidates = pool.filter(ex => ex.muscleGroup === group);
       if (!candidates.length) return null;
       const ex = candidates[Math.floor(Math.random() * candidates.length)];
       return { exerciseId: ex.id, name: ex.name, sets: scheme.sets, reps: scheme.reps };
     }).filter(Boolean);
-    return { day: d.day, focus: d.focus, exercises };
+    return { day, focus, exercises };
   });
 
-  return { generatedAt: new Date().toISOString(), homeOnly: !!homeOnly, goal, activityLevel, days: scheduleDays };
+  return { generatedAt: new Date().toISOString(), homeOnly: !!homeOnly, goal, activityLevel, workoutType: workoutTypeKey || 'fullBody', days: scheduleDays };
 }
 
-const COMPLEXIONS = ['fair', 'medium', 'deep'];
+const COMPLEXIONS = ['porcelain', 'fair', 'light', 'medium', 'tan', 'deep'];
 const HAIR_TYPES = ['straight', 'wavy', 'curly', 'coily'];
 const HAIR_STYLES = ['bald', 'short', 'medium', 'long'];
 const EYE_COLORS = ['brown', 'blue', 'green', 'hazel', 'gray', 'amber'];
@@ -303,9 +374,12 @@ const CONDITIONS = ['new', 'likeNew', 'good', 'worn', 'fair'];
 const FITS = ['loose', 'fitted', 'exact', 'notFit'];
 
 const COMPLEXION_PALETTES = {
-  fair:    ['navy', 'burgundy', 'emerald', 'soft pink', 'charcoal'],
-  medium:  ['olive', 'rust', 'mustard', 'teal', 'chocolate brown'],
-  deep:    ['white', 'coral', 'royal blue', 'gold', 'fuchsia'],
+  porcelain: ['navy', 'burgundy', 'emerald', 'soft pink', 'charcoal'],
+  fair:      ['dusty blue', 'blush', 'lavender', 'taupe', 'forest green'],
+  light:     ['coral', 'camel', 'teal', 'mustard', 'denim blue'],
+  medium:    ['olive', 'rust', 'mustard', 'teal', 'chocolate brown'],
+  tan:       ['terracotta', 'olive green', 'amber', 'cream', 'deep teal'],
+  deep:      ['white', 'coral', 'royal blue', 'gold', 'fuchsia'],
 };
 const BODY_SHAPE_TIPS = {
   triangle:    'Balance shoulders with structured tops and darker bottoms.',
@@ -314,7 +388,17 @@ const BODY_SHAPE_TIPS = {
   hourglass:   'Favor fitted silhouettes that follow your natural waistline.',
   oval:        'Choose vertical lines and single-color outfits to elongate.',
 };
-const WARDROBE_CATEGORIES = ['top', 'bottom', 'outerwear', 'footwear', 'formal', 'activewear'];
+const WARDROBE_CATEGORIES = ['top', 'bottom', 'outerwear', 'footwear', 'accessories', 'formal', 'activewear'];
+// Categories offered when manually building an outfit (a subset/reframing of
+// WARDROBE_CATEGORIES — outerwear/formal/activewear items still get suggested
+// under whichever slot they best fit via category match, but the builder UI
+// only asks for these four to keep the flow quick).
+const OUTFIT_BUILDER_SLOTS = [
+  { key: 'top', label: 'Top', categories: ['top'], required: true },
+  { key: 'bottom', label: 'Bottom', categories: ['bottom'], required: true },
+  { key: 'footwear', label: 'Shoes', categories: ['footwear'], required: false },
+  { key: 'accessories', label: 'Accessories', categories: ['accessories'], required: false },
+];
 
 function buildFashionRecommendations(user) {
   const { complexion, bodyShape } = user.profile;
@@ -358,11 +442,13 @@ function aiClientFor(user) {
   return { provider: 'anthropic', client: new Anthropic({ apiKey: s.apiKey }), model: AI_MODEL };
 }
 
-function imageFileData(filePath) {
+function mediaTypeForFile(filePath) {
   const ext = path.extname(filePath).toLowerCase();
-  const mediaType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+  return ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+}
+function imageFileData(filePath) {
   const data = fs.readFileSync(filePath).toString('base64');
-  return { mediaType, data };
+  return { mediaType: mediaTypeForFile(filePath), data };
 }
 
 function firstTextBlock(message) {
@@ -494,10 +580,160 @@ async function aiGenerateOutfit(ai, prompt, wardrobe, profile) {
     `Person: complexion=${profile.complexion || 'unspecified'}, bodyShape=${profile.bodyShape || 'unspecified'}.\n` +
     `Request: "${prompt}"\n` +
     `Pick a coherent outfit using only item ids from the wardrobe above (omit categories that aren't needed) and explain the reasoning in 1-2 sentences. ` +
-    `JSON shape: {"itemIds": [<string>...], "reasoning": "<string>"}`;
+    `Also give an overall score from 1.0 to 5.0 (one decimal place) for how well this outfit works for this person's complexion and body shape.\n` +
+    `JSON shape: {"itemIds": [<string>...], "reasoning": "<string>", "score": <number>}`;
   return aiComplete(ai, {
     text, maxTokens: 500,
-    jsonShape: { type: 'object', properties: { itemIds: { type: 'array', items: { type: 'string' } }, reasoning: { type: 'string' } }, required: ['itemIds', 'reasoning'], additionalProperties: false },
+    jsonShape: { type: 'object', properties: { itemIds: { type: 'array', items: { type: 'string' } }, reasoning: { type: 'string' }, score: { type: 'number' } }, required: ['itemIds', 'reasoning', 'score'], additionalProperties: false },
+  });
+}
+
+// Given a photo of a worn outfit, identifies each garment and either matches
+// it to an existing wardrobe item (by id, so we "merge" rather than duplicate)
+// or describes a new one to be created. Also scores the outfit as a whole.
+async function aiLinkOutfitItems(ai, photoPath, wardrobe, profile) {
+  const wardrobeList = wardrobe.map(i => ({ id: i.id, name: i.name, category: i.category, color: i.color }));
+  const text = `This is a photo of an outfit someone is wearing. Identify each distinct garment/accessory visible (e.g. top, bottom, outerwear, footwear).\n` +
+    `Here is the person's existing wardrobe catalog (JSON): ${JSON.stringify(wardrobeList)}\n` +
+    `For each garment you see, decide whether it matches an existing catalog item (same category and same/very similar color) — if so set "id" to that item's id from the catalog above, exactly as given. If it does not match anything in the catalog, set "id" to an empty string and describe it: name, category (one of: ${WARDROBE_CATEGORIES.join(', ')}), color (one of: ${COLOR_OPTIONS.join(', ')}).\n` +
+    `Also give an overall score from 1.0 to 5.0 (one decimal place) for how well this outfit works for the person (complexion=${profile.complexion || 'unspecified'}, bodyShape=${profile.bodyShape || 'unspecified'}), and a 1-2 sentence comment on color coordination, fit, and style cohesion.\n` +
+    `JSON shape: {"garments": [{"id": "<string, may be empty>", "name": "<string>", "category": "<string>", "color": "<string>"}], "score": <number>, "comment": "<string>"}`;
+  return aiComplete(ai, {
+    imagePath: photoPath, text, maxTokens: 700,
+    jsonShape: {
+      type: 'object',
+      properties: {
+        garments: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { id: { type: 'string' }, name: { type: 'string' }, category: { type: 'string', enum: WARDROBE_CATEGORIES }, color: { type: 'string', enum: COLOR_OPTIONS } },
+            required: ['id', 'name', 'category', 'color'], additionalProperties: false,
+          },
+        },
+        score: { type: 'number' }, comment: { type: 'string' },
+      },
+      required: ['garments', 'score', 'comment'], additionalProperties: false,
+    },
+  });
+}
+
+// ─── AI IMAGE GENERATION (BYOK — separate provider from the text/vision AI) ───
+//
+// Generates a full-body "wearing this outfit" shot with the head cropped out.
+// Provider is independent of the user's chat/vision aiProvider since only
+// some providers can generate images at all (Anthropic can't).
+
+function outfitImagePrompt(items) {
+  const desc = items.map(i => (i.color ? i.color + ' ' : '') + i.name + ' (' + i.category + ')').join(', ');
+  return 'Full-body studio product photo of a person wearing an outfit consisting of: ' + desc + '. '
+    + 'Neutral seamless studio background, even lighting, realistic fabric texture and fit, standing pose. '
+    + 'Frame the shot from the shoulders down to the feet — crop out and exclude the head and face entirely. '
+    + 'No text, watermark, or logos.';
+}
+
+// Returns a Buffer of the generated image, or throws.
+async function generateOutfitImage(settings, items) {
+  const prompt = outfitImagePrompt(items);
+  if (settings.imageGenProvider === 'openai') {
+    const client = new OpenAI({ apiKey: settings.imageGenApiKey });
+    const model = settings.imageGenModel || 'gpt-image-1';
+    // Pure text-to-image can only guess at "a navy jacket" — it won't match the
+    // actual garment. When the items have real photos, hand them to images.edit
+    // as reference images instead, so the model composes the outfit from what's
+    // actually in the wardrobe rather than a text description of it.
+    const referencePaths = items.map(i => mainPhoto(i)).filter(Boolean).map(url => path.join(CLIENT_DIR, url));
+    if (referencePaths.length) {
+      // toFile() can't sniff the mimetype from a raw read stream — without an
+      // explicit type it defaults to application/octet-stream, which the
+      // images.edit endpoint rejects outright ("unsupported mimetype").
+      const imageFiles = await Promise.all(referencePaths.map(p => toFile(fs.createReadStream(p), path.basename(p), { type: mediaTypeForFile(p) })));
+      const result = await client.images.edit({
+        model, image: imageFiles, size: '1024x1536', quality: 'high',
+        prompt: prompt + ' The reference images show the actual garments — reproduce their exact color, pattern, and design rather than substituting similar-looking items.',
+      });
+      return Buffer.from(result.data[0].b64_json, 'base64');
+    }
+    const result = await client.images.generate({ model, prompt, size: '1024x1536', quality: 'high' });
+    return Buffer.from(result.data[0].b64_json, 'base64');
+  }
+  if (settings.imageGenProvider === 'gemini') {
+    const model = settings.imageGenModel || 'gemini-2.5-flash-image';
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(settings.imageGenApiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } }),
+    });
+    if (!resp.ok) {
+      const bodyText = await resp.text().catch(() => '');
+      let detail = bodyText;
+      try { detail = JSON.parse(bodyText).error.message; } catch (_) { /* keep raw text */ }
+      console.error('[image-gen] Gemini request failed:', resp.status, bodyText);
+      throw new Error('Gemini image request failed (' + resp.status + '): ' + (detail || 'no details returned'));
+    }
+    const json = await resp.json();
+    const parts = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) || [];
+    const imagePart = parts.find(p => p.inlineData);
+    if (!imagePart) throw new Error('Gemini did not return an image');
+    return Buffer.from(imagePart.inlineData.data, 'base64');
+  }
+  throw new Error('Image generation provider not configured');
+}
+
+// Best-effort: generates the outfit image and appends it to outfit.photos
+// marked ai:true. Takes ids (not object references) and reloads data fresh
+// right before writing, since the image call can take a while and this is a
+// single-file datastore — minimizes (doesn't eliminate) lost-update races
+// against other requests that might save in the meantime. Never throws.
+async function generateAndAttachOutfitImage(userName, outfitId) {
+  const data = loadData();
+  const user = findUser(data, userName);
+  if (!user) return { ok: false, error: 'user-not-found' };
+  const outfit = user.fashion.outfits.find(o => o.id === outfitId);
+  if (!outfit) return { ok: false, error: 'outfit-not-found' };
+  if (!user.settings.imageGenProvider || !user.settings.imageGenApiKey) return { ok: false, error: 'not-configured' };
+  const items = user.fashion.wardrobe.filter(i => outfit.itemIds.includes(i.id));
+  if (!items.length) return { ok: false, error: 'no-items' };
+  let buf;
+  try {
+    buf = await generateOutfitImage(user.settings, items);
+  } catch (err) {
+    console.error('[image-gen] generateAndAttachOutfitImage failed for outfit ' + outfitId + ':', err.message);
+    return { ok: false, error: err.message };
+  }
+  const fresh = loadData();
+  const freshUser = findUser(fresh, userName);
+  const freshOutfit = freshUser && freshUser.fashion.outfits.find(o => o.id === outfitId);
+  if (!freshOutfit) return { ok: false, error: 'outfit-not-found' };
+  const dir = path.join(IMAGES_DIR, 'uploaded', sanitizeFolderName(userName), 'outfit');
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '.png';
+  fs.writeFileSync(path.join(dir, filename), buf);
+  const url = '/images/uploaded/' + sanitizeFolderName(userName) + '/outfit/' + filename;
+  const photo = addPhoto(freshOutfit, url, { ai: true });
+  saveData(fresh);
+  return { ok: true, photo, outfit: freshOutfit };
+}
+
+async function aiShoppingRecommendations(ai, wardrobe, outfits, profile) {
+  const wardrobeSummary = wardrobe.map(i => ({ name: i.name, category: i.category, color: i.color }));
+  const outfitSummary = outfits.map(o => ({ items: o.items.map(i => i.name), score: o.score }));
+  const text = `You are a personal stylist. Here is the person's current wardrobe (JSON): ${JSON.stringify(wardrobeSummary)}\n`
+    + `Here are their saved outfits (JSON): ${JSON.stringify(outfitSummary)}\n`
+    + `Person: complexion=${profile.complexion || 'unspecified'}, bodyShape=${profile.bodyShape || 'unspecified'}.\n`
+    + `Based on what outfits they can already make and what's missing, give: (1) a 2-3 sentence summary of how well their wardrobe currently supports full outfits, `
+    + `(2) a list of up to 5 specific items to buy next to unlock more outfit combinations, each with a short reason.\n`
+    + `JSON shape: {"summary": "<string>", "shoppingList": [{"item": "<string>", "reason": "<string>"}]}`;
+  return aiComplete(ai, {
+    text, maxTokens: 600,
+    jsonShape: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string' },
+        shoppingList: { type: 'array', items: { type: 'object', properties: { item: { type: 'string' }, reason: { type: 'string' } }, required: ['item', 'reason'], additionalProperties: false } },
+      },
+      required: ['summary', 'shoppingList'], additionalProperties: false,
+    },
   });
 }
 
@@ -680,6 +916,9 @@ function publicSettings(settings) {
     aiBaseUrl: settings.aiBaseUrl,
     aiModel: settings.aiModel,
     apiKeyConfigured: !!settings.apiKey,
+    imageGenProvider: settings.imageGenProvider,
+    imageGenModel: settings.imageGenModel,
+    imageGenApiKeyConfigured: !!settings.imageGenApiKey,
   };
 }
 
@@ -839,6 +1078,22 @@ app.put('/settings/ai', (req, res) => {
   res.json({ ok: true, settings: publicSettings(user.settings) });
 });
 
+const IMAGE_GEN_PROVIDERS = ['openai', 'gemini'];
+
+app.put('/settings/image-gen', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const { provider, apiKey, model } = req.body || {};
+  if (provider !== undefined) {
+    if (provider !== null && provider !== '' && !IMAGE_GEN_PROVIDERS.includes(provider)) return res.status(400).json({ ok: false, error: 'Unknown image generation provider' });
+    user.settings.imageGenProvider = provider || null;
+  }
+  if (apiKey !== undefined) user.settings.imageGenApiKey = apiKey ? String(apiKey).trim() : null;
+  if (model !== undefined) user.settings.imageGenModel = model ? String(model).trim() : null;
+  saveData(data);
+  res.json({ ok: true, settings: publicSettings(user.settings) });
+});
+
 // ─── FITNESS ──────────────────────────────────────────────────────────────────
 
 app.get('/exercises', (req, res) => {
@@ -948,12 +1203,17 @@ app.get('/fitness/plan/recommended-exercises', (req, res) => {
   res.json({ ok: true, recommendedIds });
 });
 
+app.get('/fitness/workout-types', (req, res) => {
+  res.json({ ok: true, workoutTypes: Object.entries(WORKOUT_TYPES).map(([key, v]) => ({ key, label: v.label })) });
+});
+
 app.post('/fitness/plan/generate', (req, res) => {
   const data = loadData();
   const user = requireUser(req, res, data); if (!user) return;
   const homeOnly = !!(req.body && req.body.homeOnly);
   const includeIds = (req.body && Array.isArray(req.body.includeIds)) ? req.body.includeIds : null;
-  user.fitness.plan = generatePlan(user, data.exerciseLibrary, homeOnly, includeIds);
+  const workoutType = (req.body && WORKOUT_TYPES[req.body.workoutType]) ? req.body.workoutType : 'fullBody';
+  user.fitness.plan = generatePlan(user, data.exerciseLibrary, homeOnly, includeIds, workoutType);
   saveData(data);
   res.json({ ok: true, plan: user.fitness.plan });
 });
@@ -980,6 +1240,138 @@ app.post('/fitness/history', (req, res) => {
   res.json({ ok: true, entry });
 });
 
+// ─── HABITS ───────────────────────────────────────────────────────────────────
+
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const HABIT_RECURRENCE_TYPES = ['daily', 'weekly', 'once'];
+
+function isValidRecurrence(r) {
+  if (!r || !HABIT_RECURRENCE_TYPES.includes(r.type)) return false;
+  if (r.type === 'weekly') return Array.isArray(r.days) && r.days.length > 0 && r.days.every(d => WEEKDAYS.includes(d));
+  if (r.type === 'once') return typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date);
+  return true;
+}
+
+app.get('/habits', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  res.json({ ok: true, habits: user.habits });
+});
+
+app.post('/habits', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const { name, durationMinutes, recurrence } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ ok: false, error: 'Name required' });
+  const rec = recurrence || { type: 'daily' };
+  if (!isValidRecurrence(rec)) return res.status(400).json({ ok: false, error: 'Invalid recurrence' });
+  const habit = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name: name.trim(),
+    durationMinutes: Number(durationMinutes) > 0 ? Number(durationMinutes) : 10,
+    recurrence: rec,
+    completions: [],
+    createdAt: new Date().toISOString(),
+  };
+  user.habits.push(habit);
+  saveData(data);
+  res.json({ ok: true, habit });
+});
+
+app.put('/habits/:id', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const habit = user.habits.find(h => h.id === req.params.id);
+  if (!habit) return res.status(404).json({ ok: false, error: 'Habit not found' });
+  const { name, durationMinutes, recurrence } = req.body || {};
+  if (name !== undefined) { if (!name.trim()) return res.status(400).json({ ok: false, error: 'Name required' }); habit.name = name.trim(); }
+  if (durationMinutes !== undefined) habit.durationMinutes = Number(durationMinutes) > 0 ? Number(durationMinutes) : habit.durationMinutes;
+  if (recurrence !== undefined) {
+    if (!isValidRecurrence(recurrence)) return res.status(400).json({ ok: false, error: 'Invalid recurrence' });
+    habit.recurrence = recurrence;
+  }
+  saveData(data);
+  res.json({ ok: true, habit });
+});
+
+app.delete('/habits/:id', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  user.habits = user.habits.filter(h => h.id !== req.params.id);
+  saveData(data);
+  res.json({ ok: true });
+});
+
+app.post('/habits/:id/complete', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const habit = user.habits.find(h => h.id === req.params.id);
+  if (!habit) return res.status(404).json({ ok: false, error: 'Habit not found' });
+  const date = (req.body && req.body.date) || todayStr();
+  if (!habit.completions.includes(date)) habit.completions.push(date);
+  saveData(data);
+  res.json({ ok: true, habit });
+});
+
+app.delete('/habits/:id/complete/:date', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const habit = user.habits.find(h => h.id === req.params.id);
+  if (!habit) return res.status(404).json({ ok: false, error: 'Habit not found' });
+  habit.completions = habit.completions.filter(d => d !== req.params.date);
+  saveData(data);
+  res.json({ ok: true, habit });
+});
+
+// ─── MOTIVATIONS (shared across all users, refreshed from a free public API) ──
+
+async function fetchMotivationsFromApi() {
+  const resp = await fetch('https://zenquotes.io/api/quotes');
+  if (!resp.ok) throw new Error('ZenQuotes request failed: ' + resp.status);
+  const json = await resp.json();
+  const items = json.map(q => (q.q || '').trim() + (q.a && q.a !== 'zenquotes.io' ? ' — ' + q.a : '')).filter(Boolean);
+  if (!items.length) throw new Error('ZenQuotes returned no quotes');
+  return items;
+}
+
+app.get('/motivations', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  res.json({ ok: true, motivations: data.motivations });
+});
+
+// Shared resource (not per-user) — any logged-in user can trigger a refresh,
+// same as the initial boot-time sync below.
+app.post('/motivations/sync', async (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  try {
+    const items = await fetchMotivationsFromApi();
+    data.motivations = { items, syncedAt: new Date().toISOString() };
+    saveData(data);
+    res.json({ ok: true, motivations: data.motivations });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: 'Failed to sync motivations: ' + err.message });
+  }
+});
+
+// Best-effort one-time seed: only runs if this server has never successfully
+// synced before (syncedAt null), so restarts don't keep re-fetching — that's
+// what the Settings "Sync Motivations" button is for.
+(async function seedMotivationsOnBoot() {
+  const data = loadData();
+  if (data.motivations && data.motivations.syncedAt) return;
+  try {
+    const items = await fetchMotivationsFromApi();
+    const fresh = loadData();
+    fresh.motivations = { items, syncedAt: new Date().toISOString() };
+    saveData(fresh);
+    console.log('[motivations] boot sync succeeded: ' + items.length + ' quotes');
+  } catch (err) {
+    console.error('[motivations] boot sync failed, keeping defaults:', err.message);
+  }
+})();
+
 // ─── FASHION ──────────────────────────────────────────────────────────────────
 
 app.get('/fashion/wardrobe', (req, res) => {
@@ -1003,15 +1395,15 @@ app.post('/fashion/wardrobe', wardrobeUpload.single('photo'), async (req, res) =
   const user = requireUser(req, res, data); if (!user) return;
   const b = req.body || {};
   if (!b.name || !b.category) return res.status(400).json({ ok: false, error: 'name and category required' });
-  const item = {
+  const item = Object.assign(defaultWardrobeItemFields(), {
     id: Date.now().toString(36), name: b.name, category: b.category, size: b.size || null, color: b.color || null,
     condition: b.condition || null, fit: b.fit || null,
     favorite: b.favorite === 'true' || b.favorite === true,
     remarks: b.remarks || null,
     measurements: wardrobeMeasurementsFromBody(b),
-    photo: req.file ? '/images/uploaded/' + sanitizeFolderName(user.name) + '/wardrobe/' + req.file.filename : null,
     aiScore: null, aiReason: null,
-  };
+  });
+  if (req.file) addPhoto(item, '/images/uploaded/' + sanitizeFolderName(user.name) + '/wardrobe/' + req.file.filename);
   user.fashion.wardrobe.push(item);
   saveData(data);
   res.json({ ok: true, item });
@@ -1051,7 +1443,30 @@ app.put('/fashion/wardrobe/:id', wardrobeUpload.single('photo'), (req, res) => {
   if (b.remarks !== undefined) item.remarks = b.remarks || null;
   if (b.aiScore !== undefined) item.aiScore = b.aiScore === '' || b.aiScore === null ? null : Number(b.aiScore);
   item.measurements = wardrobeMeasurementsFromBody(b, item.measurements);
-  if (req.file) item.photo = '/images/uploaded/' + sanitizeFolderName(user.name) + '/wardrobe/' + req.file.filename;
+  if (req.file) addPhoto(item, '/images/uploaded/' + sanitizeFolderName(user.name) + '/wardrobe/' + req.file.filename);
+  saveData(data);
+  res.json({ ok: true, item });
+});
+
+app.post('/fashion/wardrobe/:id/photos', wardrobeUpload.single('photo'), (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const item = user.fashion.wardrobe.find(i => i.id === req.params.id);
+  if (!item) return res.status(404).json({ ok: false, error: 'Item not found' });
+  if (!req.file) return res.status(400).json({ ok: false, error: 'photo required' });
+  const photo = addPhoto(item, '/images/uploaded/' + sanitizeFolderName(user.name) + '/wardrobe/' + req.file.filename);
+  saveData(data);
+  res.json({ ok: true, item, photo });
+});
+
+app.delete('/fashion/wardrobe/:id/photos/:photoId', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const item = user.fashion.wardrobe.find(i => i.id === req.params.id);
+  if (!item) return res.status(404).json({ ok: false, error: 'Item not found' });
+  const removed = removePhoto(item, req.params.photoId);
+  if (!removed) return res.status(404).json({ ok: false, error: 'Photo not found' });
+  if (removed.url) { try { fs.unlinkSync(path.join(CLIENT_DIR, removed.url)); } catch (_) {} }
   saveData(data);
   res.json({ ok: true, item });
 });
@@ -1091,7 +1506,7 @@ app.delete('/fashion/wardrobe/:id', (req, res) => {
   const data = loadData();
   const user = requireUser(req, res, data); if (!user) return;
   const item = user.fashion.wardrobe.find(i => i.id === req.params.id);
-  if (item && item.photo) { try { fs.unlinkSync(path.join(CLIENT_DIR, item.photo)); } catch (_) {} }
+  if (item) for (const p of item.photos || []) { try { fs.unlinkSync(path.join(CLIENT_DIR, p.url)); } catch (_) {} }
   user.fashion.wardrobe = user.fashion.wardrobe.filter(i => i.id !== req.params.id);
   saveData(data);
   res.json({ ok: true });
@@ -1100,7 +1515,28 @@ app.delete('/fashion/wardrobe/:id', (req, res) => {
 app.get('/fashion/recommendations', (req, res) => {
   const data = loadData();
   const user = requireUser(req, res, data); if (!user) return;
-  res.json({ ok: true, ...buildFashionRecommendations(user) });
+  res.json({ ok: true, ...buildFashionRecommendations(user), aiShoppingAdvice: user.fashion.aiShoppingAdvice });
+});
+
+// On-demand (not run on every page load, to avoid burning tokens per visit):
+// analyzes existing outfits + wardrobe gaps and caches the advice.
+app.post('/fashion/recommendations/ai-refresh', async (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const ai = aiClientFor(user);
+  if (!ai) return res.status(400).json({ ok: false, error: 'Add your API key in Settings first' });
+  const usageError = checkAiUsage(data, user);
+  if (usageError) return res.status(403).json({ ok: false, error: usageError });
+  try {
+    const outfits = user.fashion.outfits.map(o => ({ ...o, items: user.fashion.wardrobe.filter(i => o.itemIds.includes(i.id)) }));
+    const { value, tokens } = await aiShoppingRecommendations(ai, user.fashion.wardrobe, outfits, user.profile);
+    user.fashion.aiShoppingAdvice = { summary: value.summary, shoppingList: value.shoppingList, generatedAt: new Date().toISOString() };
+    recordAiUsage(user, tokens, 'shopping-recommendations');
+    saveData(data);
+    res.json({ ok: true, aiShoppingAdvice: user.fashion.aiShoppingAdvice });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: 'AI request failed: ' + err.message });
+  }
 });
 
 app.get('/fashion/size-guide', (req, res) => {
@@ -1145,6 +1581,67 @@ app.delete('/fashion/outfit-checks/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Promotes an uploaded outfit-check photo into a saved Outfit: AI identifies
+// each garment in the photo, links it to a matching wardrobe item if one
+// exists (merge, no duplicate), or creates a new wardrobe item for it. The
+// outfit-check entry is then removed — it becomes the Outfit, not a copy.
+app.post('/fashion/outfit-checks/:id/promote', async (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const check = user.fashion.outfitChecks.find(c => c.id === req.params.id);
+  if (!check) return res.status(404).json({ ok: false, error: 'Outfit check not found' });
+  const ai = aiClientFor(user);
+  if (!ai) return res.status(400).json({ ok: false, error: 'Add your API key in Settings first' });
+  const usageError = checkAiUsage(data, user);
+  if (usageError) return res.status(403).json({ ok: false, error: usageError });
+  try {
+    const { value, tokens } = await aiLinkOutfitItems(ai, path.join(CLIENT_DIR, check.photo), user.fashion.wardrobe, user.profile);
+    const itemIds = [];
+    for (const g of value.garments) {
+      let matched = g.id && user.fashion.wardrobe.find(i => i.id === g.id);
+      if (!matched) {
+        matched = Object.assign({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          name: g.name, category: g.category, size: null, color: g.color,
+          aiScore: null, aiReason: null,
+        }, defaultWardrobeItemFields());
+        // Copy (not reuse) the check photo so this item and the outfit each own
+        // an independent file — otherwise deleting one unlinks the other's photo.
+        const wardrobeDir = path.join(IMAGES_DIR, 'uploaded', sanitizeFolderName(user.name), 'wardrobe');
+        fs.mkdirSync(wardrobeDir, { recursive: true });
+        const copyName = uploadFilename({ originalname: check.photo });
+        fs.copyFileSync(path.join(CLIENT_DIR, check.photo), path.join(wardrobeDir, copyName));
+        addPhoto(matched, '/images/uploaded/' + sanitizeFolderName(user.name) + '/wardrobe/' + copyName);
+        user.fashion.wardrobe.push(matched);
+      }
+      if (!itemIds.includes(matched.id)) itemIds.push(matched.id);
+    }
+    const outfit = Object.assign(defaultOutfitFields(), {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      prompt: null, itemIds, reasoning: null,
+      score: Math.round(value.score * 10) / 10, aiRemarks: value.comment,
+      source: 'outfit-check', createdAt: new Date().toISOString(),
+    });
+    addPhoto(outfit, check.photo);
+    user.fashion.outfits.push(outfit);
+    user.fashion.outfitChecks = user.fashion.outfitChecks.filter(c => c.id !== check.id);
+    recordAiUsage(user, tokens, 'promote-outfit-check');
+    saveData(data);
+    const items = user.fashion.wardrobe.filter(i => itemIds.includes(i.id));
+    res.json({ ok: true, outfit: Object.assign({}, outfit, { items }) });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: 'AI request failed: ' + err.message });
+  }
+});
+
+// "Generated outfits" (AI-picked) must be a genuinely wearable outfit — at
+// least one top and one bottom. If the wardrobe can't supply both, refuse
+// before even calling the AI rather than letting it return a partial outfit.
+function hasTopAndBottom(wardrobe) {
+  return wardrobe.some(i => i.category === 'top') && wardrobe.some(i => i.category === 'bottom');
+}
+const NEEDS_TOP_AND_BOTTOM_MESSAGE = 'Please upload a top and bottom to generate outfit.';
+
 app.post('/fashion/generate-outfit', async (req, res) => {
   const data = loadData();
   const user = requireUser(req, res, data); if (!user) return;
@@ -1152,20 +1649,44 @@ app.post('/fashion/generate-outfit', async (req, res) => {
   if (!prompt) return res.status(400).json({ ok: false, error: 'prompt required' });
   const ai = aiClientFor(user);
   if (!ai) return res.status(400).json({ ok: false, error: 'Add your API key in Settings first' });
-  if (!user.fashion.wardrobe.length) return res.status(400).json({ ok: false, error: 'Add some wardrobe items first' });
+  if (!hasTopAndBottom(user.fashion.wardrobe)) return res.status(400).json({ ok: false, error: NEEDS_TOP_AND_BOTTOM_MESSAGE });
   const usageError = checkAiUsage(data, user);
   if (usageError) return res.status(403).json({ ok: false, error: usageError });
   try {
     const { value, tokens } = await aiGenerateOutfit(ai, prompt, user.fashion.wardrobe, user.profile);
     const items = user.fashion.wardrobe.filter(i => value.itemIds.includes(i.id));
-    const outfit = Object.assign({ id: Date.now().toString(36), prompt, itemIds: items.map(i => i.id), reasoning: value.reasoning, createdAt: new Date().toISOString() }, defaultOutfitFields());
+    const outfit = Object.assign(defaultOutfitFields(), { id: Date.now().toString(36), prompt, itemIds: items.map(i => i.id), reasoning: value.reasoning, score: Math.round(value.score * 10) / 10, createdAt: new Date().toISOString() });
     user.fashion.outfits.push(outfit);
     recordAiUsage(user, tokens, 'generate-outfit');
     saveData(data);
     res.json({ ok: true, outfit, items });
+    generateAndAttachOutfitImage(user.name, outfit.id).catch(() => {});
   } catch (err) {
     res.status(502).json({ ok: false, error: 'AI request failed: ' + err.message });
   }
+});
+
+// Manual outfit builder: the client enforces top+bottom as required picks
+// (shoes/accessories optional) via OUTFIT_BUILDER_SLOTS, but we re-validate
+// server-side since this is the same "must be a full outfit" guarantee.
+app.get('/fashion/outfit-builder-slots', (req, res) => res.json({ ok: true, slots: OUTFIT_BUILDER_SLOTS }));
+
+app.post('/fashion/outfits/manual', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const itemIds = (req.body && Array.isArray(req.body.itemIds)) ? req.body.itemIds : [];
+  const items = user.fashion.wardrobe.filter(i => itemIds.includes(i.id));
+  if (!items.some(i => i.category === 'top') || !items.some(i => i.category === 'bottom')) {
+    return res.status(400).json({ ok: false, error: NEEDS_TOP_AND_BOTTOM_MESSAGE });
+  }
+  const outfit = Object.assign(defaultOutfitFields(), {
+    id: Date.now().toString(36), prompt: null, itemIds: items.map(i => i.id), reasoning: null,
+    source: 'manual', createdAt: new Date().toISOString(),
+  });
+  user.fashion.outfits.push(outfit);
+  saveData(data);
+  res.json({ ok: true, outfit, items });
+  generateAndAttachOutfitImage(user.name, outfit.id).catch(() => {});
 });
 
 app.get('/fashion/outfits', (req, res) => {
@@ -1183,8 +1704,54 @@ app.put('/fashion/outfits/:id', (req, res) => {
   const b = req.body || {};
   if (b.remarks !== undefined) outfit.remarks = b.remarks || null;
   if (b.score !== undefined) outfit.score = (b.score === null || b.score === '') ? null : Number(b.score);
+  if (b.itemIds !== undefined) {
+    if (!Array.isArray(b.itemIds)) return res.status(400).json({ ok: false, error: 'itemIds must be an array' });
+    const valid = b.itemIds.filter(id => user.fashion.wardrobe.some(i => i.id === id));
+    outfit.itemIds = valid;
+  }
   saveData(data);
   res.json({ ok: true, outfit: Object.assign({}, outfit, { items: user.fashion.wardrobe.filter(i => outfit.itemIds.includes(i.id)) }) });
+});
+
+app.post('/fashion/outfits/:id/photos', outfitCheckUpload.single('photo'), (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const outfit = user.fashion.outfits.find(o => o.id === req.params.id);
+  if (!outfit) return res.status(404).json({ ok: false, error: 'Outfit not found' });
+  if (!req.file) return res.status(400).json({ ok: false, error: 'photo required' });
+  const photo = addPhoto(outfit, '/images/uploaded/' + sanitizeFolderName(user.name) + '/outfit/' + req.file.filename);
+  saveData(data);
+  res.json({ ok: true, outfit: Object.assign({}, outfit, { items: user.fashion.wardrobe.filter(i => outfit.itemIds.includes(i.id)) }), photo });
+});
+
+app.delete('/fashion/outfits/:id/photos/:photoId', (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const outfit = user.fashion.outfits.find(o => o.id === req.params.id);
+  if (!outfit) return res.status(404).json({ ok: false, error: 'Outfit not found' });
+  const removed = removePhoto(outfit, req.params.photoId);
+  if (!removed) return res.status(404).json({ ok: false, error: 'Photo not found' });
+  if (removed.url) { try { fs.unlinkSync(path.join(CLIENT_DIR, removed.url)); } catch (_) {} }
+  saveData(data);
+  res.json({ ok: true, outfit: Object.assign({}, outfit, { items: user.fashion.wardrobe.filter(i => outfit.itemIds.includes(i.id)) }) });
+});
+
+// Manual (re)generate — unlike the best-effort auto-generation on creation,
+// this surfaces the real error (e.g. "not configured") since it's user-initiated.
+app.post('/fashion/outfits/:id/generate-image', async (req, res) => {
+  const data = loadData();
+  const user = requireUser(req, res, data); if (!user) return;
+  const outfit = user.fashion.outfits.find(o => o.id === req.params.id);
+  if (!outfit) return res.status(404).json({ ok: false, error: 'Outfit not found' });
+  if (!user.settings.imageGenProvider || !user.settings.imageGenApiKey) {
+    return res.status(400).json({ ok: false, error: 'Configure an image generation provider (OpenAI or Gemini) in Settings first.' });
+  }
+  const result = await generateAndAttachOutfitImage(user.name, outfit.id);
+  if (!result.ok) return res.status(502).json({ ok: false, error: 'Image generation failed: ' + result.error });
+  const fresh = loadData();
+  const freshUser = findUser(fresh, user.name);
+  const freshOutfit = freshUser.fashion.outfits.find(o => o.id === outfit.id);
+  res.json({ ok: true, outfit: Object.assign({}, freshOutfit, { items: freshUser.fashion.wardrobe.filter(i => freshOutfit.itemIds.includes(i.id)) }) });
 });
 
 app.post('/fashion/outfits/:id/ai-fill', async (req, res) => {
@@ -1212,6 +1779,8 @@ app.post('/fashion/outfits/:id/ai-fill', async (req, res) => {
 app.delete('/fashion/outfits/:id', (req, res) => {
   const data = loadData();
   const user = requireUser(req, res, data); if (!user) return;
+  const outfit = user.fashion.outfits.find(o => o.id === req.params.id);
+  if (outfit) for (const p of outfit.photos || []) { try { fs.unlinkSync(path.join(CLIENT_DIR, p.url)); } catch (_) {} }
   user.fashion.outfits = user.fashion.outfits.filter(o => o.id !== req.params.id);
   saveData(data);
   res.json({ ok: true });

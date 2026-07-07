@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Fromesco" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
 <link rel="apple-touch-icon" sizes="167x167" href="/icon-167.png" />
 <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
@@ -19,6 +20,10 @@
     --bg:#0a0a0a; --surface:#161616; --surface2:#1e1e1e; --surface3:#262626; --border:#2a2a2a;
     --text:#f2f2f2; --text-dim:#9a9a9a; --accent:#2dd4bf; --accent-2:#fb923c; --accent-dim:#0f766e;
     --danger:#f87171; --radius:16px; --radius-sm:10px; --nav-h:64px;
+    /* Home tile accents (Designer) — soft, desaturated hues used only as a thin
+       top-border + faint corner glow, never as fills, so the dark theme stays
+       calm and the color reads as "organized by topic" rather than decoration. */
+    --tint-blue:#60a5fa; --tint-purple:#a78bfa; --tint-gold:#fbbf24; --tint-pink:#f472b6;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html{touch-action:manipulation; -webkit-text-size-adjust:100%;}
@@ -144,6 +149,82 @@
   .wardrobe-tile-fav{position:absolute;top:8px;left:8px;background:rgba(10,10,10,.55);color:var(--danger);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;}
   .wardrobe-tile-body{padding:10px 12px 12px;}
   .wardrobe-tile-name{font-weight:600;font-size:14px;margin-bottom:4px;}
+  .wardrobe-tile-view{position:absolute;top:8px;right:50px;}
+
+  /* Floating action button (Add Exercise, Add Item) */
+  .fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -6px rgba(0,0,0,.6);z-index:20;padding:0;}
+
+  /* Fullscreen photo viewer */
+  .photo-viewer-overlay{background:rgba(0,0,0,.94);align-items:center;justify-content:center;}
+  #photo-viewer-img{max-width:100%;max-height:100%;touch-action:none;user-select:none;cursor:zoom-in;}
+
+  /* Fashion filter bar */
+  .filter-bar{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;}
+  .filter-bar select{width:auto;flex-shrink:0;padding:8px 28px 8px 10px;font-size:13px;}
+
+  /* Photo carousel (outfits + wardrobe items) */
+  .photo-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;margin-top:8px;border-radius:var(--radius);-webkit-overflow-scrolling:touch;}
+  .photo-carousel-slide{position:relative;flex:0 0 100%;scroll-snap-align:center;aspect-ratio:4/5;max-height:280px;background:var(--surface3);border-radius:var(--radius);overflow:hidden;}
+  .photo-carousel-slide img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;}
+  .photo-carousel-badge-ai{position:absolute;top:8px;left:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04201d;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;}
+  .photo-carousel-actions{position:absolute;top:8px;right:8px;display:flex;gap:6px;}
+  .photo-carousel-add{flex:0 0 100%;scroll-snap-align:center;aspect-ratio:4/5;max-height:280px;border:2px dashed var(--border);border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;color:var(--text-dim);}
+  .photo-carousel-count{text-align:center;font-size:12px;margin-top:4px;}
+
+  /* Outfit builder (manual Add Outfit) */
+  .builder-slot{border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;}
+  .builder-slot-label{font-weight:600;font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .builder-slot-required{color:var(--danger);font-size:11px;}
+  .builder-pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px;}
+  .builder-pick{position:relative;border:2px solid var(--border);border-radius:10px;overflow:hidden;aspect-ratio:1/1;cursor:pointer;background:var(--surface3);}
+  .builder-pick.selected{border-color:var(--accent);}
+  .builder-pick img{width:100%;height:100%;object-fit:cover;}
+  .builder-pick-name{position:absolute;bottom:0;left:0;right:0;background:rgba(10,10,10,.72);color:var(--text);font-size:10px;padding:3px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* Home tile accents (Designer) — thin colored top border + a faint corner
+     glow blob at low opacity. No fills, no saturation on text/background —
+     color is the only thing that changes, kept subtle by opacity alone. */
+  .card-tint{position:relative;border-top:3px solid var(--tint);overflow:hidden;}
+  .card-tint::before{content:'';position:absolute;top:-36px;right:-36px;width:90px;height:90px;border-radius:50%;background:var(--tint);opacity:.10;pointer-events:none;}
+  .tint-teal{--tint:var(--accent);}
+  .tint-blue{--tint:var(--tint-blue);}
+  .tint-purple{--tint:var(--tint-purple);}
+  .tint-gold{--tint:var(--tint-gold);}
+  .tint-pink{--tint:var(--tint-pink);}
+
+  /* Link items modal */
+  .link-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .link-item-row:last-child{border-bottom:none;}
+
+  /* Fitness activity calendar */
+  .cal-weekday-row{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:var(--text-dim);margin-bottom:4px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-cell{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:13px;background:var(--surface3);color:var(--text-dim);}
+  .cal-cell{cursor:pointer;}
+  .cal-cell.empty{background:transparent;cursor:default;}
+  .cal-cell.today{box-shadow:inset 0 0 0 2px var(--accent);color:var(--text);}
+  .cal-cell.active{background:var(--accent-dim);color:#d1fff8;font-weight:700;}
+  .cal-cell.selected{box-shadow:inset 0 0 0 2px var(--accent-2);}
+  .cal-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-dim);display:inline-block;}
+
+  /* Habit module */
+  .habit-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+  .habit-row:last-child{border-bottom:none;}
+  .habit-row.done{opacity:.55;}
+  .habit-check{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .habit-row.done .habit-check{background:var(--accent);border-color:var(--accent);color:#04201d;}
+  .habit-name{font-weight:600;font-size:14px;}
+  .habit-meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
+
+  /* Focus timer */
+  .focus-timer-overlay{background:rgba(0,0,0,.94);flex-direction:column;align-items:center;justify-content:center;gap:24px;}
+  .focus-timer-ring{position:relative;width:240px;height:240px;}
+  .focus-timer-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .focus-timer-ring circle{fill:none;stroke-width:10;}
+  .focus-timer-ring .track{stroke:var(--surface3);}
+  .focus-timer-ring .progress{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset 1s linear;}
+  .focus-timer-remaining{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);}
+  .focus-timer-name{font-size:18px;font-weight:600;color:var(--text);text-align:center;padding:0 24px;}
 </style>
 </head>
 <body>
@@ -179,6 +260,8 @@ const ICONS = {
   play: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
   flag: '<svg viewBox="0 0 24 24"><path d="M5 15s1.5-1 5-1 5 2 9 2V4s-1.5 1-5 1-5-2-9-2z"/><line x1="5" y1="22" x2="5" y2="4"/></svg>',
   info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  eye: '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  habit: '<svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>',
 };
 
 function iconBtn(icon, cls, attr){ return '<button class="icon-btn '+cls+'" '+attr+'>'+ICONS[icon]+'</button>'; }
@@ -186,7 +269,7 @@ function iconBtn(icon, cls, attr){ return '<button class="icon-btn '+cls+'" '+at
 /* ─── SESSION + API ─────────────────────────────────────────────────────── */
 
 let session = JSON.parse(localStorage.getItem('pf_session') || 'null');
-let state = { view: session ? 'loading' : 'login-select', pendingName: null, error: null, data: {}, modal: null, onboardingStep: 0, activeWorkout: null, exerciseSort: 'recommended' };
+let state = { view: session ? 'loading' : 'login-select', pendingName: null, error: null, data: {}, modal: null, onboardingStep: 0, activeWorkout: null, exerciseSort: 'recommended', itemFilters: { category: '', color: '', minScore: '' } };
 
 function saveSession(s){ session = s; localStorage.setItem('pf_session', JSON.stringify(s)); }
 function clearSession(){ session = null; localStorage.removeItem('pf_session'); }
@@ -236,7 +319,7 @@ function render(){
 
 function navHtml(hasNav){
   if (!hasNav) return '';
-  const tabs = [['dashboard','Home','home'], ['fitness','Fitness','fitness'], ['fashion','Fashion','fashion'], ['settings','Settings','settings']];
+  const tabs = [['dashboard','Home','home'], ['fitness','Fitness','fitness'], ['fashion','Fashion','fashion'], ['habit','Habit','habit'], ['settings','Settings','settings']];
   return '<div class="nav"><div class="nav-inner">' + tabs.map(([v,label,icon]) =>
     '<button data-nav="'+v+'" class="'+(state.view===v?'active':'')+'">'+ICONS[icon]+'<span>'+label+'</span></button>'
   ).join('') + '</div></div>';
@@ -351,7 +434,32 @@ const DIET_TYPES = ['omnivore','vegetarian','vegan','pescatarian','keto','other'
 const GOALS = ['weightLoss','muscleGain','strength','endurance','maintenance','styleImprovement'];
 const BODY_SHAPES = ['triangle','invertedTriangle','rectangle','hourglass','oval'];
 const EQUIPMENT_TYPES = ['none','dumbbells','barbell','cableMachine','machine','pullupBar','bike','treadmill'];
-const COMPLEXIONS = ['fair','medium','deep'];
+const WORKOUT_TYPES = [
+  { key: 'fullBody', label: 'Full Body' },
+  { key: 'upperLower', label: 'Upper / Lower Split' },
+  { key: 'pushPullLegs', label: 'Push / Pull / Legs' },
+  { key: 'broSplit', label: 'Bro Split (one muscle/day)' },
+  { key: 'coreCardio', label: 'Core & Cardio Focus' },
+];
+// Mirrors the server's WORKOUT_TYPES cycle -> FOCUS_MUSCLE_GROUPS mapping, so
+// the Generate Plan checklist can pre-check exercises that actually match the
+// selected split instead of just "recommended for your profile" in general.
+const WORKOUT_TYPE_CYCLES = {
+  fullBody: ['Full Body'], upperLower: ['Upper Body', 'Lower Body'], pushPullLegs: ['Push', 'Pull', 'Legs'],
+  broSplit: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms'], coreCardio: ['Core', 'Cardio'],
+};
+const FOCUS_MUSCLE_GROUPS_CLIENT = {
+  'Full Body': ['chest','back','legs','core','shoulders','arms'], 'Upper Body': ['chest','back','shoulders','arms'],
+  'Lower Body': ['legs','core'], 'Push': ['chest','shoulders','arms'], 'Pull': ['back','arms'], 'Legs': ['legs','core'],
+  'Chest': ['chest'], 'Back': ['back'], 'Shoulders': ['shoulders'], 'Arms': ['arms'], 'Core': ['core'], 'Cardio': ['cardio'],
+};
+function muscleGroupsForWorkoutType(key){
+  const cycle = WORKOUT_TYPE_CYCLES[key] || WORKOUT_TYPE_CYCLES.fullBody;
+  const set = new Set();
+  cycle.forEach(f => (FOCUS_MUSCLE_GROUPS_CLIENT[f]||[]).forEach(g => set.add(g)));
+  return set;
+}
+const COMPLEXIONS = ['porcelain','fair','light','medium','tan','deep'];
 const HAIR_TYPES = ['straight','wavy','curly','coily'];
 const HAIR_STYLES = ['bald','short','medium','long'];
 const EYE_COLORS = ['brown','blue','green','hazel','gray','amber'];
@@ -545,7 +653,7 @@ function fitnessCardHtml(fs){
   const scoreColor = tier === 'critical' ? 'var(--danger)' : tier === 'low' ? 'var(--accent-2)' : 'var(--accent)';
   return '<div class="card fitness-score-card tier-'+tier+'">'
     + '<div class="row" style="justify-content:space-between;align-items:flex-start;">'
-    + '<h3 style="margin-bottom:0;">Fitness Score</h3>'
+    + '<h3 style="margin-bottom:0;">💪 Fitness Score</h3>'
     + '<button class="icon-btn" data-action="fitness-score-info" aria-label="Score breakdown">'+ICONS.info+'</button>'
     + '</div>'
     + '<div class="row" style="align-items:baseline;gap:8px;margin-top:4px;"><span style="font-size:36px;font-weight:700;color:'+scoreColor+';">'+fs.overall.toFixed(1)+'</span><span class="muted">/ 5.0</span></div>'
@@ -577,24 +685,86 @@ function fitnessScoreInfoModalHtml(fs){
     + '</div></div>';
 }
 
+function motivationLineHtml(){
+  const items = (state.data.motivations && state.data.motivations.items) || [];
+  if (!items.length) return '';
+  const idx = (state.motivationIndex||0) % items.length;
+  return '<p class="muted" style="margin-top:-8px;margin-bottom:16px;font-style:italic;">"'+escapeHtml(items[idx])+'"</p>';
+}
+
+function todaysWorkoutTileHtml(){
+  const plan = state.data.plan;
+  if (!plan) return '';
+  const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const day = plan.days.find(d => d.day === todayName);
+  if (!day || !day.exercises.length) return '';
+  const done = isDayCompletedThisWeek(todayName, state.data.history||[]);
+  return '<div class="card card-tint tint-teal"><h3>🏋️ Today\'s Workout</h3>'
+    + '<p>'+day.focus+' — '+day.exercises.length+' exercise'+(day.exercises.length===1?'':'s')+(done?' <span class="pill accent">✓ Done</span>':'')+'</p>'
+    + '<button class="block" data-nav="fitness">'+(done?'View Fitness':'Start Workout')+'</button>'
+  + '</div>';
+}
+
+function habitDashboardTileHtml(){
+  const dueToday = (state.data.habits||[]).filter(isHabitDueToday);
+  return '<div class="card card-tint tint-purple"><h3>✅ Habits Today</h3>'
+    + (dueToday.length
+        ? dueToday.map(h => '<div class="habit-row'+(isHabitCompletedToday(h)?' done':'')+'" data-habit-id="'+h.id+'">'
+            + '<span class="habit-check" data-habit-check="'+h.id+'">'+(isHabitCompletedToday(h)?'✓':'')+'</span>'
+            + '<div style="flex:1;"><div class="habit-name">'+escapeHtml(h.name)+'</div><div class="habit-meta">'+h.durationMinutes+' min</div></div>'
+          + '</div>').join('')
+        : '<p class="muted">Nothing scheduled today.</p>')
+    + '<button class="secondary block" style="margin-top:10px;" data-nav="habit">Manage Habits</button>'
+  + '</div>';
+}
+
+function goalCountdownTileHtml(){
+  const info = goalCountdownInfo();
+  const text = !info ? 'Set a goal target date in your profile to track a countdown.'
+    : info.days < 0 ? (escapeHtml(info.label)+' target date has passed — update it in your profile.')
+    : info.days === 0 ? (escapeHtml(info.label)+' target date is today!')
+    : ('<b>'+info.days+'</b> day'+(info.days===1?'':'s')+' left to reach your <b>'+escapeHtml(info.label)+'</b> goal.');
+  return '<div class="card card-tint tint-gold"><h3>🎯 Progress</h3><p>'+text+'</p>'
+    + '<button class="secondary block" data-action="open-fitness-calendar">📅 View Calendar</button>'
+  + '</div>';
+}
+
 VIEWS['dashboard'] = () => {
   const p = state.data.profile || {};
-  return '<h1>Hey, '+escapeHtml(session.name)+'</h1>'
-  + '<div class="card">'
-    + '<h3>Your Stats</h3>'
+  return '<h1>👋 Hey, '+escapeHtml(session.name)+'</h1>'
+  + motivationLineHtml()
+  + '<div class="card card-tint tint-blue">'
+    + '<h3>📊 Your Stats</h3>'
     + '<div class="row"><span class="pill">BMI: '+(state.data.bmi ?? '—')+'</span>'
     + '<span class="pill">Activity: '+labelize(p.activityLevel||'—')+'</span>'
     + '<span class="pill">Goal: '+labelize((p.goals||[])[0]||'—')+'</span></div>'
     + '<div style="margin-top:12px;"><button class="secondary" data-action="edit-profile">Edit Profile</button></div>'
   + '</div>'
   + fitnessCardHtml(state.data.fitnessScore)
-  + '<div class="card"><h3>Fashion</h3><p>Wardrobe, style tips, and AI outfit ideas.</p><button class="block" data-nav="fashion">Go to Fashion</button></div>';
+  + todaysWorkoutTileHtml()
+  + habitDashboardTileHtml()
+  + goalCountdownTileHtml()
+  + '<div class="card card-tint tint-pink"><h3>👗 Fashion</h3><p>Wardrobe, style tips, and AI outfit ideas.</p><button class="block" data-nav="fashion">Go to Fashion</button></div>';
 };
 
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-action="edit-profile"]')) { state.onboardingStep = 0; go('onboarding'); }
   if (e.target.closest('[data-action="fitness-score-info"]')) { state.modal = { type: 'fitness-score-info', fs: state.data.fitnessScore }; render(); }
 });
+
+async function loadDashboardExtras(){
+  const [motivRes, habitsRes, planRes, histRes] = await Promise.all([
+    api('/motivations'), api('/habits'), api('/fitness/plan'), api('/fitness/history'),
+  ]);
+  state.data.motivations = motivRes.motivations;
+  state.data.habits = habitsRes.habits;
+  state.data.plan = planRes.plan;
+  state.data.history = histRes.history;
+  if (state.motivationIndex == null) {
+    state.motivationIndex = state.data.motivations.items.length ? Math.floor(Math.random()*state.data.motivations.items.length) : 0;
+  }
+  render();
+}
 
 /* ─── EXERCISE DETAIL MODAL ─────────────────────────────────────────────── */
 
@@ -608,6 +778,19 @@ function modalHtml(){
   if (state.modal.type === 'workout-summary') return workoutSummaryModalHtml(state.modal);
   if (state.modal.type === 'fitness-score-info') return fitnessScoreInfoModalHtml(state.modal.fs);
   if (state.modal.type === 'edit-wardrobe-item') return editWardrobeItemModalHtml(state.modal.item);
+  if (state.modal.type === 'add-exercise') return addExerciseModalHtml();
+  if (state.modal.type === 'add-wardrobe') return addWardrobeModalHtml();
+  if (state.modal.type === 'outfit-detail') return outfitDetailModalHtml(state.modal.outfit);
+  if (state.modal.type === 'link-items') return linkItemsModalHtml(state.modal.outfit);
+  if (state.modal.type === 'add-outfit') return addOutfitModalHtml();
+  if (state.modal.type === 'fitness-calendar') return fitnessCalendarModalHtml();
+  if (state.modal.type === 'exercise-library') return exerciseLibraryModalHtml();
+  if (state.modal.type === 'add-habit') return habitFormModalHtml(false);
+  if (state.modal.type === 'edit-habit') return habitFormModalHtml(true);
+  if (state.modal.type === 'habit-detail') return habitDetailModalHtml(state.modal.habit);
+  if (state.modal.type === 'focus-timer') return focusTimerModalHtml(state.modal);
+  if (state.modal.type === 'focus-timer-done') return focusTimerDoneModalHtml(state.modal);
+  if (state.modal.type === 'photo-viewer') { resetViewer(); return photoViewerModalHtml(state.modal.photo); }
   return '';
 }
 
@@ -674,21 +857,36 @@ VIEWS['fitness'] = () => {
     + '<button data-action="open-generate-plan">'+(plan ? 'Regenerate' : 'Generate Plan')+'</button>'
   + '</div>'
   + (plan ? planHtml(plan) : '')
-  + '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;">'
-    + '<h3 style="margin-bottom:0;">Exercise Library</h3>'
-    + '<select id="exercise-sort" class="sort-select">'
+  + '<div class="card row" style="justify-content:space-between;align-items:center;">'
+    + '<div><h3 style="margin-bottom:2px;">Exercise Library</h3><p class="muted" style="margin:0;">'+(state.data.exercises||[]).length+' exercises available.</p></div>'
+    + '<button class="secondary" data-action="open-exercise-library">View Exercises</button>'
+  + '</div>'
+  + historyHtml(state.data.history||[]);
+};
+
+function exerciseLibraryModalHtml(){
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;align-items:center;">'
+    + '<h2 style="margin-bottom:0;">Exercise Library</h2>'
+    + '<button class="close-x" data-close-modal>✕</button>'
+    + '</div>'
+    + '<select id="exercise-sort" class="sort-select" style="margin:10px 0;">'
       + '<option value="recommended"'+(state.exerciseSort==='recommended'?' selected':'')+'>Recommended first</option>'
       + '<option value="alphabetical"'+(state.exerciseSort==='alphabetical'?' selected':'')+'>Alphabetical</option>'
       + '<option value="complexity"'+(state.exerciseSort==='complexity'?' selected':'')+'>Complexity</option>'
     + '</select>'
-  + '</div>'
+    + '<div style="max-height:60vh;overflow-y:auto;">'
     + sortExercises(state.data.exercises||[]).map(ex => '<div class="list-item list-item-clickable" data-exercise-id="'+ex.id+'">'
       + '<span class="row" style="gap:10px;"><img class="thumb" src="'+(ex.image||'')+'" onerror="this.style.visibility=\'hidden\'"><span>'+escapeHtml(ex.name)+'</span></span>'
       + (ex.homeFriendly ? '<span class="pill accent">Home</span>' : '<span class="pill">'+labelize(ex.equipment)+'</span>')
       + '</div>').join('')
-  + '</div>'
-  + historyHtml(state.data.history||[]);
-};
+    + '</div>'
+  + '</div></div>';
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-action="open-exercise-library"]')) { state.modal = { type: 'exercise-library' }; render(); }
+});
 
 // ── Motivation: streak + adaptive encouragement (Innovator) ────────────────
 // A "streak" is consecutive calendar days with at least one logged workout,
@@ -739,13 +937,16 @@ function estimateSetCalories(ex, reps){
 function startWorkoutCardHtml(){
   const history = state.data.history || [];
   const streak = computeStreak(history);
-  return '<div class="card center">'
-    + (streak > 0 ? '<div class="pill accent" style="margin-bottom:10px;">🔥 '+streak+'-day streak</div>' : '')
-    + '<h3 style="text-transform:none;color:var(--text);font-size:16px;">Ready to train?</h3>'
-    + '<p>'+escapeHtml(motivationMessage(streak, history.length))+'</p>'
-    + '<div class="row" style="justify-content:center;">'
-    + '<button data-action="start-workout">'+ICONS.play+' Start Workout</button>'
-    + '<button class="secondary" data-action="open-manual-log">Log Manually</button>'
+  return '<div class="card" style="padding:14px 16px;">'
+    + '<div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'
+    + '<div>'
+      + '<div style="font-weight:600;font-size:14px;color:var(--text);">'+(streak>0?'🔥 '+streak+'-day streak':'Ready to train?')+'</div>'
+      + '<div class="muted" style="font-size:12px;margin-top:2px;">'+escapeHtml(motivationMessage(streak, history.length))+'</div>'
+    + '</div>'
+    + '<div class="row" style="gap:8px;">'
+    + '<button data-action="start-workout">'+ICONS.play+' Start</button>'
+    + '<button class="secondary" data-action="open-manual-log">Log</button>'
+    + '</div>'
     + '</div></div>';
 }
 
@@ -775,7 +976,10 @@ function generatePlanOptionsModalHtml(){
   const exercises = state.data.exercises || [];
   return '<div class="overlay"><div class="sheet">'
     + '<div class="row" style="justify-content:space-between;"><h2>Generate Plan</h2><button class="close-x" data-close-modal>✕</button></div>'
-    + '<label class="row" style="gap:8px;margin-bottom:10px;"><input type="checkbox" id="generate-plan-home-only" '+(m.homeOnly?'checked':'')+'> <span>Home workouts only</span></label>'
+    + '<label>Workout Type<select id="generate-plan-workout-type">'
+      + WORKOUT_TYPES.map(t => '<option value="'+t.key+'" '+(m.workoutType===t.key?'selected':'')+'>'+t.label+'</option>').join('')
+    + '</select></label>'
+    + '<label class="row" style="gap:8px;margin:10px 0;"><input type="checkbox" id="generate-plan-home-only" '+(m.homeOnly?'checked':'')+'> <span>Home workouts only</span></label>'
     + (m.selected === null
         ? '<p class="muted">Loading recommendations…</p>'
         : '<p class="muted" style="margin-bottom:10px;">Checked = recommended for your profile. Calories are estimated from your weight and each exercise\'s MET (metabolic equivalent) research value — tap to include or exclude.</p>'
@@ -886,18 +1090,139 @@ async function finishWorkout(){
   render();
 }
 
+const WEEKDAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+// Date (YYYY-MM-DD) of `dayName` in the current calendar week (Mon-start).
+function dateOfWeekdayThisWeek(dayName){
+  const now = new Date();
+  const mondayOffset = (now.getDay() + 6) % 7; // 0=Mon..6=Sun
+  const monday = new Date(now); monday.setHours(0,0,0,0); monday.setDate(now.getDate() - mondayOffset);
+  const target = new Date(monday); target.setDate(monday.getDate() + WEEKDAYS.indexOf(dayName));
+  return target.toISOString().slice(0,10);
+}
+function isDayCompletedThisWeek(dayName, history){
+  const dateStr = dateOfWeekdayThisWeek(dayName);
+  return (history||[]).some(h => h.date && h.date.slice(0,10) === dateStr);
+}
+
 function planHtml(plan){
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const history = state.data.history || [];
   return (plan.homeOnly ? '<div class="row" style="margin-bottom:6px;"><span class="pill accent">Home only</span></div>' : '')
     + plan.days.map(d => {
       const isToday = d.day === today;
+      const isDone = isDayCompletedThisWeek(d.day, history);
       return '<div class="plan-day'+(isToday?' today':'')+'">'
-        + '<div class="plan-day-header"><span class="plan-day-name">'+d.day+(isToday?' <span class="plan-day-today-badge">Today</span>':'')+'</span><span class="pill accent">'+d.focus+'</span></div>'
+        + '<div class="plan-day-header"><span class="plan-day-name">'+d.day+(isToday?' <span class="plan-day-today-badge">Today</span>':'')+(isDone?' <span class="plan-day-today-badge" style="background:var(--accent-2);">✓ Done</span>':'')+'</span><span class="pill accent">'+d.focus+'</span></div>'
         + '<div class="plan-day-body">'
         + d.exercises.map(ex => '<div class="list-item"><span class="exercise-link" data-exercise-id="'+ex.exerciseId+'">'+escapeHtml(ex.name)+'</span><span class="pill">'+ex.sets+' × '+ex.reps+'</span></div>').join('')
         + '</div></div>';
     }).join('');
 }
+
+/* ─── FITNESS ACTIVITY CALENDAR ──────────────────────────────────────────── */
+
+function ensureCalendarMonth(){
+  if (!state.calendarMonth) { const now = new Date(); state.calendarMonth = { year: now.getFullYear(), month: now.getMonth() }; }
+  return state.calendarMonth;
+}
+
+// Days remaining to the profile's goal target date — used both in the
+// calendar modal and the Home goal-countdown tile.
+function goalCountdownInfo(){
+  const p = state.data.profile || {};
+  if (!p.goals || !p.goals[0] || !p.goalTargetDate) return null;
+  const target = new Date(p.goalTargetDate);
+  if (isNaN(target)) return null;
+  const now = new Date(); now.setHours(0,0,0,0); target.setHours(0,0,0,0);
+  const days = Math.round((target - now) / 86400000);
+  return { label: labelize(p.goals[0]), days };
+}
+
+function goalCountdownHtml(){
+  const info = goalCountdownInfo();
+  if (!info) return '<p class="muted">Set a goal target date in your profile to track a countdown.</p>';
+  if (info.days < 0) return '<p><b>'+escapeHtml(info.label)+'</b> target date has passed — update it in your profile.</p>';
+  if (info.days === 0) return '<p><b>'+escapeHtml(info.label)+'</b> target date is today!</p>';
+  return '<p><b>'+info.days+'</b> day'+(info.days===1?'':'s')+' left to reach your <b>'+escapeHtml(info.label)+'</b> goal.</p>';
+}
+
+function fitnessCalendarModalHtml(){
+  const cm = ensureCalendarMonth();
+  const history = state.data.history || [];
+  const workoutDates = new Set(history.map(h => h.date && h.date.slice(0,10)).filter(Boolean));
+  const first = new Date(cm.year, cm.month, 1);
+  const startOffset = (first.getDay() + 6) % 7; // Mon-start grid
+  const daysInMonth = new Date(cm.year, cm.month + 1, 0).getDate();
+  const todayStr = new Date().toISOString().slice(0,10);
+  const monthLabel = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push('<div class="cal-cell empty"></div>');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = new Date(cm.year, cm.month, d).toISOString().slice(0,10);
+    const hasWorkout = workoutDates.has(dateStr);
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === state.calendarSelectedDate;
+    cells.push('<div class="cal-cell'+(isToday?' today':'')+(hasWorkout?' active':'')+(isSelected?' selected':'')+'" data-cal-date="'+dateStr+'">'+d+'</div>');
+  }
+
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Activity Calendar</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<div class="row" style="justify-content:space-between;align-items:center;margin:6px 0 10px;">'
+    + '<button class="icon-btn" data-cal-nav="-1">‹</button>'
+    + '<b>'+monthLabel+'</b>'
+    + '<button class="icon-btn" data-cal-nav="1">›</button>'
+    + '</div>'
+    + '<div class="cal-weekday-row">'+WEEKDAYS.map(w=>'<div>'+w.slice(0,2)+'</div>').join('')+'</div>'
+    + '<div class="cal-grid">'+cells.join('')+'</div>'
+    + '<div class="row" style="margin-top:12px;gap:6px;align-items:center;"><span class="cal-dot"></span><span class="muted" style="font-size:12px;">Workout logged that day · tap a day for details</span></div>'
+    + (state.calendarSelectedDate ? dayAgendaHtml(state.calendarSelectedDate) : '')
+  + '</div></div>';
+}
+
+// Everything due across the app (fitness plan + habits) for a given date —
+// powers the calendar's tap-a-day agenda.
+function dayAgendaHtml(dateStr){
+  const [y,mo,d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, mo-1, d);
+  const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+  const items = [];
+  const plan = state.data.plan;
+  if (plan) {
+    const day = plan.days.find(dd => dd.day === weekdayName);
+    if (day && day.exercises.length) {
+      const done = (state.data.history||[]).some(h => h.date && h.date.slice(0,10) === dateStr);
+      items.push({ label: day.focus+' workout ('+day.exercises.length+' exercise'+(day.exercises.length===1?'':'s')+')', done });
+    }
+  }
+  (state.data.habits||[]).forEach(h => {
+    if (isHabitDueOn(h, dateStr, weekdayName)) items.push({ label: h.name, done: (h.completions||[]).includes(dateStr) });
+  });
+  return '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">'
+    + '<h3 style="margin-bottom:8px;">'+dateObj.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'})+'</h3>'
+    + (items.length
+        ? items.map(it => '<div class="list-item"><span>'+(it.done?'✓ ':'')+escapeHtml(it.label)+'</span></div>').join('')
+        : '<p class="muted">Nothing scheduled this day.</p>')
+  + '</div>';
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-action="open-fitness-calendar"]')) { ensureCalendarMonth(); state.calendarSelectedDate = null; state.modal = { type: 'fitness-calendar' }; render(); return; }
+  const navBtn = e.target.closest('[data-cal-nav]');
+  if (navBtn) {
+    const cm = ensureCalendarMonth();
+    const delta = Number(navBtn.getAttribute('data-cal-nav'));
+    let month = cm.month + delta, year = cm.year;
+    if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+    state.calendarMonth = { year, month };
+    state.calendarSelectedDate = null;
+    render();
+    return;
+  }
+  const dateCell = e.target.closest('[data-cal-date]');
+  if (dateCell) { state.calendarSelectedDate = dateCell.getAttribute('data-cal-date'); render(); }
+});
 
 function historyHtml(history){
   if (!history.length) return '';
@@ -931,15 +1256,28 @@ async function loadFitnessView(){
 async function loadRecommendedExercises(homeOnly){
   const r = await api('/fitness/plan/recommended-exercises?homeOnly='+homeOnly);
   if (!state.modal || state.modal.type !== 'generate-plan-options') return;
-  state.modal.selected = {};
-  (state.data.exercises||[]).forEach(ex => { state.modal.selected[ex.id] = r.recommendedIds.includes(ex.id); });
+  state.modal.recommendedIds = r.recommendedIds;
+  applySelectedForWorkoutType();
   render();
+}
+
+// Pre-checks only the exercises that are both "recommended for your profile"
+// AND target a muscle group the selected workout type actually trains — so
+// switching e.g. to Push/Pull/Legs re-checks push/pull/leg exercises instead
+// of leaving whatever was checked for Full Body.
+function applySelectedForWorkoutType(){
+  if (!state.modal || state.modal.type !== 'generate-plan-options' || !state.modal.recommendedIds) return;
+  const groups = muscleGroupsForWorkoutType(state.modal.workoutType);
+  const selected = {};
+  (state.data.exercises||[]).forEach(ex => { selected[ex.id] = state.modal.recommendedIds.includes(ex.id) && groups.has(ex.muscleGroup); });
+  state.modal.selected = selected;
 }
 
 document.addEventListener('click', async (e) => {
   if (e.target.closest('[data-action="open-generate-plan"]')) {
     const homeOnly = !!state.homeOnly;
-    state.modal = { type: 'generate-plan-options', homeOnly, selected: null };
+    const workoutType = (state.data.plan && state.data.plan.workoutType) || 'fullBody';
+    state.modal = { type: 'generate-plan-options', homeOnly, workoutType, selected: null };
     state.error = null;
     render();
     await loadRecommendedExercises(homeOnly);
@@ -950,7 +1288,7 @@ document.addEventListener('click', async (e) => {
     const includeIds = Object.keys(m.selected).filter(id => m.selected[id]);
     if (!includeIds.length) { state.error = 'Select at least one exercise.'; render(); return; }
     state.homeOnly = m.homeOnly;
-    const r = await api('/fitness/plan/generate', { method:'POST', body: JSON.stringify({ homeOnly: m.homeOnly, includeIds }) });
+    const r = await api('/fitness/plan/generate', { method:'POST', body: JSON.stringify({ homeOnly: m.homeOnly, includeIds, workoutType: m.workoutType }) });
     state.data.plan = r.plan;
     state.modal = null; state.error = null;
     render();
@@ -994,6 +1332,12 @@ document.addEventListener('change', async (e) => {
     await loadRecommendedExercises(state.modal.homeOnly);
     return;
   }
+  if (e.target.id === 'generate-plan-workout-type' && state.modal && state.modal.type === 'generate-plan-options') {
+    state.modal.workoutType = e.target.value;
+    applySelectedForWorkoutType();
+    render();
+    return;
+  }
   const planEx = e.target.closest('[data-plan-ex]');
   if (planEx && state.modal && state.modal.selected) state.modal.selected[planEx.getAttribute('data-plan-ex')] = planEx.checked;
 });
@@ -1021,7 +1365,13 @@ document.addEventListener('submit', async (e) => {
 
 /* ─── FASHION ───────────────────────────────────────────────────────────── */
 
-const WARDROBE_CATEGORIES = ['top','bottom','outerwear','footwear','formal','activewear'];
+const WARDROBE_CATEGORIES = ['top','bottom','outerwear','footwear','accessories','formal','activewear'];
+const OUTFIT_BUILDER_SLOTS = [
+  { key: 'top', label: 'Top', categories: ['top'], required: true },
+  { key: 'bottom', label: 'Bottom', categories: ['bottom'], required: true },
+  { key: 'footwear', label: 'Shoes', categories: ['footwear'], required: false },
+  { key: 'accessories', label: 'Accessories', categories: ['accessories'], required: false },
+];
 const COLOR_OPTIONS = ['black','white','gray','navy','blue','red','pink','purple','green','olive','yellow','orange','brown','beige','burgundy','teal','multicolor'];
 const CONDITIONS = ['new','likeNew','good','worn','fair'];
 const FITS = ['loose','fitted','exact','notFit'];
@@ -1087,34 +1437,55 @@ function addWardrobeFormHtml(){
 VIEWS['fashion'] = () => {
   const rec = state.data.recommendations || {};
   const aiOn = state.data.aiEnabled;
+  const aiAvailable = aiOn && state.data.settings && state.data.settings.apiKeyConfigured;
+  const advice = rec.aiShoppingAdvice;
   return '<h1>Fashion</h1>'
   + '<div class="card"><h3>Recommendations</h3>'
     + '<div class="row">'+ (rec.recommendedColors||[]).map(c=>'<span class="pill" style="display:inline-flex;align-items:center;gap:6px;">'+colorSwatchHtml(c,12)+escapeHtml(c)+'</span>').join('') +'</div>'
     + (rec.styleTip ? '<p>'+escapeHtml(rec.styleTip)+'</p>' : '<p class="muted">Set complexion & body shape in your profile for tailored tips.</p>')
     + (rec.wardrobeGaps && rec.wardrobeGaps.length ? '<p class="muted">Missing from wardrobe: '+rec.wardrobeGaps.map(labelize).join(', ')+'</p>' : '')
+    + (aiAvailable
+        ? (advice
+            ? '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">'
+              + '<p>'+escapeHtml(advice.summary)+'</p>'
+              + (advice.shoppingList && advice.shoppingList.length
+                  ? '<ul style="margin:0;padding-left:18px;color:var(--text-dim);">'+advice.shoppingList.map(s => '<li style="margin-bottom:4px;"><b style="color:var(--text);">'+escapeHtml(s.item)+'</b> — '+escapeHtml(s.reason)+'</li>').join('')+'</ul>'
+                  : '')
+              + '<button class="secondary block" style="margin-top:10px;" id="ai-shopping-refresh">✨ Refresh AI Recommendations</button>'
+            + '</div>'
+            : '<button class="secondary block" style="margin-top:10px;" id="ai-shopping-refresh">✨ Get AI Shopping Recommendations</button>')
+        : '')
   + '</div>'
-  + '<div class="card"><h3>Wardrobe</h3>'
-    + addWardrobeFormHtml()
-    + '<button class="secondary block" style="margin-top:12px;" data-nav="fashion-items">View All Items ('+(state.data.wardrobe||[]).length+')</button>'
+  + '<div class="card"><h3>Wardrobe</h3><p>'+(state.data.wardrobe||[]).length+' item'+((state.data.wardrobe||[]).length===1?'':'s')+' cataloged.</p>'
+    + '<button class="block" data-nav="fashion-items">View All Items</button>'
   + '</div>'
   + (aiOn
-      ? '<div class="card"><h3>Generate Outfit</h3><p>Describe what you need and AI picks it from your wardrobe.</p>'
-        + '<button class="block" data-open-generate-outfit>Generate Outfit</button>'
-        + '<button class="secondary block" style="margin-top:10px;" data-nav="fashion-outfits">View Generated Outfits ('+(state.data.outfits||[]).length+')</button></div>'
-      : aiDisabledPlaceholder('Generate Outfit', 'AI features are currently turned off by your administrator.'))
-  + (aiOn
-      ? '<div class="card"><h3>Outfit Check</h3><p>Upload a photo of your outfit and get AI feedback.</p>'
-        + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;">Tap to upload a photo</div><input type="file" accept="image/*" style="display:none;" id="outfit-check-input"></label>'
-        + '</div>'
-      : aiDisabledPlaceholder('Outfit Check', 'AI features are currently turned off by your administrator.'))
-  + outfitChecksHtml(state.data.outfitChecks||[])
+      ? '<div class="card"><h3>Outfits</h3><p>Generate an outfit from your wardrobe with AI, or upload a photo of what you\'re wearing to save it with AI feedback.</p>'
+        + '<button class="block" data-open-generate-outfit>✨ Generate Outfit</button>'
+        + '<label class="upload-box" style="margin-top:10px;">'+ICONS.camera+'<div class="muted" style="margin-top:6px;">Or upload a photo of your outfit</div><input type="file" accept="image/*" style="display:none;" id="outfit-check-input"></label>'
+        + pendingOutfitChecksHtml(state.data.outfitChecks||[])
+        + '<button class="secondary block" style="margin-top:12px;" data-nav="fashion-outfits">View Outfits ('+(state.data.outfits||[]).length+')</button></div>'
+      : aiDisabledPlaceholder('Outfits', 'AI features are currently turned off by your administrator.'))
   + (state.data.sizeGuide ? '<div class="card"><h3>Size Guide</h3><p>Estimated size: <b>'+state.data.sizeGuide.estimatedSize+'</b> (based on '+state.data.sizeGuide.basedOn+')</p></div>' : '');
 };
+
+function pendingOutfitChecksHtml(checks){
+  if (!checks.length) return '';
+  return checks.slice().reverse().map(c => '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">'
+      + '<img class="thumb-lg" style="max-height:220px;margin-bottom:8px;" src="'+c.photo+'">'
+      + '<p style="margin:0 0 8px;">'+escapeHtml(c.feedback)+'</p>'
+      + '<div class="row">'
+      + '<button data-promote-outfit-check="'+c.id+'">Add to Outfits</button>'
+      + '<button class="ghost" data-delete-outfit-check="'+c.id+'">Discard</button>'
+      + '</div>'
+    + '</div>').join('');
+}
 
 function wardrobeTileHtml(item){
   const score = item.aiScore != null ? Math.min(5, Math.max(1, Math.round(item.aiScore))) : null;
   return '<div class="wardrobe-tile">'
     + '<div class="wardrobe-tile-photo">'+(item.photo ? '<img src="'+item.photo+'">' : ICONS.camera)+'</div>'
+    + (item.photo ? '<button class="icon-btn wardrobe-tile-view" data-view-item="'+item.id+'">'+ICONS.eye+'</button>' : '')
     + '<button class="icon-btn wardrobe-tile-edit" data-edit-item="'+item.id+'">'+ICONS.edit+'</button>'
     + (item.favorite ? '<span class="wardrobe-tile-fav">♥</span>' : '')
     + '<div class="wardrobe-tile-body">'
@@ -1128,24 +1499,178 @@ function wardrobeTileHtml(item){
   + '</div>';
 }
 
+function filteredWardrobe(){
+  const f = state.itemFilters;
+  return (state.data.wardrobe||[]).filter(item => {
+    if (f.category && item.category !== f.category) return false;
+    if (f.color && item.color !== f.color) return false;
+    if (f.minScore === 'none' && item.aiScore != null) return false;
+    if (f.minScore && f.minScore !== 'none' && !(item.aiScore != null && item.aiScore >= Number(f.minScore))) return false;
+    return true;
+  });
+}
+
+function addWardrobeModalHtml(){
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Add Item</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + addWardrobeFormHtml()
+    + '</div></div>';
+}
+
 VIEWS['fashion-items'] = () => {
-  const items = state.data.wardrobe || [];
+  const all = state.data.wardrobe || [];
+  const items = filteredWardrobe();
+  const categories = [...new Set(all.map(i => i.category))];
+  const colors = [...new Set(all.map(i => i.color).filter(Boolean))];
+  const f = state.itemFilters;
   return '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px;">'
     + '<h1 style="margin-bottom:0;">All Items</h1>'
     + '<button class="secondary" data-nav="fashion">← Back</button>'
   + '</div>'
+  + (all.length ? '<div class="filter-bar">'
+      + '<select id="item-filter-category"><option value="">All types</option>'+categories.map(c=>'<option value="'+c+'" '+(f.category===c?'selected':'')+'>'+labelize(c)+'</option>').join('')+'</select>'
+      + '<select id="item-filter-color"><option value="">All colors</option>'+colors.map(c=>'<option value="'+c+'" '+(f.color===c?'selected':'')+'>'+labelize(c)+'</option>').join('')+'</select>'
+      + '<select id="item-filter-score"><option value="">All scores</option>'
+        + [4,3,2,1].map(n=>'<option value="'+n+'" '+(f.minScore===String(n)?'selected':'')+'>'+n+'.0+</option>').join('')
+        + '<option value="none" '+(f.minScore==='none'?'selected':'')+'>Not scored</option>'
+      + '</select>'
+    + '</div>' : '')
   + (items.length
       ? '<div class="wardrobe-grid">'+items.map(wardrobeTileHtml).join('')+'</div>'
-      : '<p class="muted">No items yet — add one from the Fashion tab.</p>');
+      : (all.length ? '<p class="muted">No items match these filters.</p>' : '<p class="muted">No items yet — tap + to add one.</p>'))
+  + '<button class="fab" data-action="open-add-item" aria-label="Add Item">+</button>';
 };
+
+// Reusable photo carousel for both wardrobe items and outfits — `kind` is
+// 'item' or 'outfit' and just picks which endpoints the add/delete buttons
+// hit; entity.photos is the shared {id,url,ai} shape for both.
+function photoCarouselHtml(entity, kind){
+  const photos = entity.photos || [];
+  const slides = photos.map(p => '<div class="photo-carousel-slide">'
+      + '<img src="'+p.url+'" data-carousel-view="'+encodeURIComponent(p.url)+'">'
+      + (p.ai ? '<span class="photo-carousel-badge-ai">✨ AI</span>' : '')
+      + '<div class="photo-carousel-actions">'
+        + '<button class="icon-btn" data-carousel-view="'+encodeURIComponent(p.url)+'">'+ICONS.eye+'</button>'
+        + '<button class="icon-btn danger" data-carousel-del-photo="'+kind+':'+entity.id+':'+p.id+'">'+ICONS.trash+'</button>'
+      + '</div>'
+    + '</div>').join('');
+  const addTile = '<label class="photo-carousel-add"><input type="file" accept="image/*" style="display:none;" data-carousel-add-photo="'+kind+':'+entity.id+'">'+ICONS.camera+'<span>Add photo</span></label>';
+  return '<div class="photo-carousel">' + slides + addTile + '</div>'
+    + (photos.length ? '<div class="muted photo-carousel-count">'+photos.length+' photo'+(photos.length===1?'':'s')+'</div>' : '');
+}
+
+document.addEventListener('click', (e) => {
+  const viewImg = e.target.closest('[data-carousel-view]');
+  if (viewImg) { state.modal = { type: 'photo-viewer', photo: decodeURIComponent(viewImg.getAttribute('data-carousel-view')) }; render(); return; }
+});
+
+document.addEventListener('click', async (e) => {
+  const delBtn = e.target.closest('[data-carousel-del-photo]');
+  if (!delBtn) return;
+  const [kind, entityId, photoId] = delBtn.getAttribute('data-carousel-del-photo').split(':');
+  const base = kind === 'item' ? '/fashion/wardrobe/' : '/fashion/outfits/';
+  const r = await api(base + entityId + '/photos/' + photoId, { method: 'DELETE' });
+  if (kind === 'item') {
+    const idx = state.data.wardrobe.findIndex(i => i.id === r.item.id);
+    if (idx !== -1) state.data.wardrobe[idx] = r.item;
+    if (state.modal && state.modal.type === 'edit-wardrobe-item') state.modal.item = r.item;
+  } else {
+    const idx = state.data.outfits.findIndex(o => o.id === r.outfit.id);
+    if (idx !== -1) state.data.outfits[idx] = r.outfit;
+    if (state.modal && state.modal.type === 'outfit-detail') state.modal.outfit = r.outfit;
+  }
+  render();
+});
+
+document.addEventListener('change', async (e) => {
+  const addInput = e.target.closest('[data-carousel-add-photo]');
+  if (!addInput || !addInput.files[0]) return;
+  const [kind, entityId] = addInput.getAttribute('data-carousel-add-photo').split(':');
+  const fd = new FormData();
+  fd.append('photo', addInput.files[0]);
+  const base = kind === 'item' ? '/fashion/wardrobe/' : '/fashion/outfits/';
+  const r = await api(base + entityId + '/photos', { method: 'POST', body: fd });
+  if (kind === 'item') {
+    const idx = state.data.wardrobe.findIndex(i => i.id === r.item.id);
+    if (idx !== -1) state.data.wardrobe[idx] = r.item;
+    if (state.modal && state.modal.type === 'edit-wardrobe-item') state.modal.item = r.item;
+  } else {
+    const idx = state.data.outfits.findIndex(o => o.id === r.outfit.id);
+    if (idx !== -1) state.data.outfits[idx] = r.outfit;
+    if (state.modal && state.modal.type === 'outfit-detail') state.modal.outfit = r.outfit;
+  }
+  render();
+});
+
+function photoViewerModalHtml(photo){
+  return '<div class="overlay photo-viewer-overlay" id="photo-viewer-overlay">'
+    + '<button class="close-x" style="position:fixed;top:calc(env(safe-area-inset-top) + 14px);right:14px;z-index:60;" data-close-modal>✕</button>'
+    + '<img id="photo-viewer-img" src="'+photo+'">'
+  + '</div>';
+}
+
+// ── Fullscreen photo viewer: wheel zoom (desktop), pinch zoom + single-finger
+// pan (touch), double-tap/double-click to toggle zoom. No libraries — just
+// Pointer Events, since this is the only place in the app that needs it.
+let viewerState = { scale: 1, x: 0, y: 0, pointers: new Map(), startDist: 0, startScale: 1, panStart: null };
+function resetViewer(){ viewerState = { scale: 1, x: 0, y: 0, pointers: new Map(), startDist: 0, startScale: 1, panStart: null }; }
+function applyViewerTransform(){
+  const img = document.getElementById('photo-viewer-img');
+  if (img) img.style.transform = 'translate('+viewerState.x+'px,'+viewerState.y+'px) scale('+viewerState.scale+')';
+}
+document.addEventListener('wheel', (e) => {
+  if (!e.target.closest('#photo-viewer-overlay')) return;
+  e.preventDefault();
+  viewerState.scale = Math.min(4, Math.max(1, viewerState.scale - e.deltaY * 0.001));
+  if (viewerState.scale === 1) { viewerState.x = 0; viewerState.y = 0; }
+  applyViewerTransform();
+}, { passive: false });
+document.addEventListener('pointerdown', (e) => {
+  const img = document.getElementById('photo-viewer-img');
+  if (!img || e.target !== img) return;
+  viewerState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (viewerState.pointers.size === 2) {
+    const pts = [...viewerState.pointers.values()];
+    viewerState.startDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    viewerState.startScale = viewerState.scale;
+  } else if (viewerState.pointers.size === 1 && viewerState.scale > 1) {
+    viewerState.panStart = { x: e.clientX - viewerState.x, y: e.clientY - viewerState.y };
+  }
+});
+document.addEventListener('pointermove', (e) => {
+  if (!viewerState.pointers.has(e.pointerId)) return;
+  viewerState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (viewerState.pointers.size === 2) {
+    const pts = [...viewerState.pointers.values()];
+    const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    viewerState.scale = Math.min(4, Math.max(1, viewerState.startScale * (dist / viewerState.startDist)));
+    applyViewerTransform();
+  } else if (viewerState.pointers.size === 1 && viewerState.panStart) {
+    viewerState.x = e.clientX - viewerState.panStart.x;
+    viewerState.y = e.clientY - viewerState.panStart.y;
+    applyViewerTransform();
+  }
+});
+function endViewerPointer(e){
+  viewerState.pointers.delete(e.pointerId);
+  if (viewerState.pointers.size < 1) viewerState.panStart = null;
+  if (viewerState.scale <= 1) { viewerState.scale = 1; viewerState.x = 0; viewerState.y = 0; applyViewerTransform(); }
+}
+document.addEventListener('pointerup', endViewerPointer);
+document.addEventListener('pointercancel', endViewerPointer);
+document.addEventListener('dblclick', (e) => {
+  if (!e.target.closest('#photo-viewer-overlay')) return;
+  viewerState.scale = viewerState.scale > 1 ? 1 : 2.5;
+  viewerState.x = 0; viewerState.y = 0;
+  applyViewerTransform();
+});
 
 function editWardrobeItemModalHtml(item){
   const aiAvailable = state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured;
   return '<div class="overlay"><div class="sheet">'
     + '<div class="row" style="justify-content:space-between;"><h2>Edit Item</h2><button class="close-x" data-close-modal>✕</button></div>'
     + '<form data-form="edit-wardrobe-item" data-item-id="'+item.id+'" class="col">'
-    + (item.photo ? '<img class="thumb-lg" style="max-height:160px;" src="'+item.photo+'">' : '')
-    + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;" id="edit-item-photo-label">Replace photo (optional)</div><input type="file" name="photo" accept="image/*" style="display:none;" id="edit-item-photo-input"></label>'
+    + photoCarouselHtml(item, 'item')
     + '<div class="grid2">'
     + inputRow('Name','name','text',item.name)
     + selectRow('Category','category',WARDROBE_CATEGORIES,item.category)
@@ -1177,21 +1702,18 @@ function editWardrobeItemModalHtml(item){
     + '</form></div></div>';
 }
 
-function outfitCardHtml(o){
-  const aiAvailable = state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured;
+const OUTFIT_SOURCE_LABELS = { 'outfit-check': 'From Photo', 'generated': 'AI Generated', 'manual': 'Manually Built' };
+
+function outfitTileHtml(o){
+  const photo = o.photo || (o.items[0] && o.items[0].photo) || null;
   const score = o.score != null ? Math.min(5, Math.max(1, Math.round(o.score))) : null;
-  return '<div class="card">'
-    + '<div class="row" style="justify-content:space-between;align-items:flex-start;">'
-    + '<p class="muted" style="margin-bottom:6px;">"'+escapeHtml(o.prompt)+'"</p>'
-    + '<button class="ghost" data-delete-outfit="'+o.id+'">Delete</button></div>'
-    + '<div class="row">'+ o.items.map(i => '<span class="pill" style="display:inline-flex;align-items:center;gap:6px;">'+(i.color?colorSwatchHtml(i.color,10):'')+escapeHtml(i.name)+'</span>').join('') +'</div>'
-    + '<p style="margin-top:6px;">'+escapeHtml(o.reasoning)+'</p>'
-    + (score != null ? '<div class="row" style="margin-top:6px;"><span class="score-badge score-'+score+'">★ '+o.score.toFixed(1)+'/5</span></div>' : '')
-    + (o.aiRemarks ? '<p class="muted" style="margin-top:4px;">AI: '+escapeHtml(o.aiRemarks)+'</p>' : '')
-    + '<label style="display:block;margin-top:8px;">Your remarks<textarea data-outfit-remarks="'+o.id+'" placeholder="Notes about this outfit">'+escapeHtml(o.remarks||'')+'</textarea></label>'
-    + '<div class="row" style="margin-top:6px;">'
-    + '<button class="secondary" data-save-outfit-remarks="'+o.id+'">Save Remarks</button>'
-    + (aiAvailable ? '<button class="secondary" data-ai-fill-outfit="'+o.id+'">✨ AI Score</button>' : '')
+  return '<div class="wardrobe-tile" data-outfit-id="'+o.id+'" style="cursor:pointer;">'
+    + '<div class="wardrobe-tile-photo">'+(photo ? '<img src="'+photo+'">' : ICONS.camera)+'</div>'
+    + (photo ? '<button class="icon-btn wardrobe-tile-view" style="right:8px;" data-view-outfit-photo="'+encodeURIComponent(photo)+'">'+ICONS.eye+'</button>' : '')
+    + '<span class="pill'+(o.source==='outfit-check'?' accent':'')+'" style="position:absolute;top:8px;left:8px;">'+(OUTFIT_SOURCE_LABELS[o.source]||'Outfit')+'</span>'
+    + '<div class="wardrobe-tile-body">'
+      + (score != null ? '<span class="score-badge score-'+score+'">★ '+o.score.toFixed(1)+'</span>' : '<span class="muted" style="font-size:12px;">Not scored</span>')
+      + '<div class="muted" style="font-size:12px;margin-top:4px;">'+o.items.length+' item'+(o.items.length===1?'':'s')+'</div>'
     + '</div>'
   + '</div>';
 }
@@ -1199,21 +1721,55 @@ function outfitCardHtml(o){
 VIEWS['fashion-outfits'] = () => {
   const outfits = state.data.outfits || [];
   return '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px;">'
-    + '<h1 style="margin-bottom:0;">Generated Outfits</h1>'
+    + '<h1 style="margin-bottom:0;">Outfits</h1>'
     + '<button class="secondary" data-nav="fashion">← Back</button>'
   + '</div>'
-  + (outfits.length ? outfits.slice().reverse().map(outfitCardHtml).join('') : '<p class="muted">No generated outfits yet.</p>');
+  + (outfits.length
+      ? '<div class="wardrobe-grid">'+outfits.slice().reverse().map(outfitTileHtml).join('')+'</div>'
+      : '<p class="muted">No outfits yet — generate one, build one manually, or add a photo from the Fashion tab.</p>')
+  + '<button class="fab" data-action="open-add-outfit" aria-label="Add Outfit">+</button>';
 };
 
-function outfitChecksHtml(checks){
-  if (!checks.length) return '';
-  return '<div class="card"><h3>Recent Outfit Checks</h3>'
-    + checks.slice().reverse().slice(0,5).map(c => '<div class="row" style="align-items:flex-start;margin-bottom:12px;">'
-      + '<img class="thumb" style="width:60px;height:60px;" src="'+c.photo+'">'
-      + '<p style="margin:0;flex:1;">'+escapeHtml(c.feedback)+'</p>'
-      + '<button class="ghost" data-delete-outfit-check="'+c.id+'">Delete</button>'
-    + '</div>').join('')
-  + '</div>';
+function outfitDetailModalHtml(o){
+  const aiAvailable = state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured;
+  const imageGenAvailable = state.data.settings && state.data.settings.imageGenProvider && state.data.settings.imageGenApiKeyConfigured;
+  const hasAiPhoto = (o.photos || []).some(p => p.ai);
+  const score = o.score != null ? Math.min(5, Math.max(1, Math.round(o.score))) : null;
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Outfit</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<span class="pill'+(o.source==='outfit-check'?' accent':'')+'">'+(OUTFIT_SOURCE_LABELS[o.source]||'Outfit')+'</span>'
+    + photoCarouselHtml(o, 'outfit')
+    + '<button class="secondary block" style="margin-top:8px;" data-generate-outfit-photo="'+o.id+'">✨ '+(hasAiPhoto?'Regenerate':'Generate')+' AI Photo'+(imageGenAvailable?'':' (configure in Settings)')+'</button>'
+    + (o.prompt ? '<p class="muted" style="margin-top:8px;">"'+escapeHtml(o.prompt)+'"</p>' : '')
+    + '<h3 style="margin-top:14px;">Linked Items</h3>'
+    + '<div class="row">'+ (o.items.length ? o.items.map(i => '<span class="pill" style="display:inline-flex;align-items:center;gap:6px;">'+(i.color?colorSwatchHtml(i.color,10):'')+escapeHtml(i.name)+'</span>').join('') : '<span class="muted" style="font-size:13px;">No items linked yet.</span>') +'</div>'
+    + '<button class="secondary block" style="margin-top:8px;" data-manage-outfit-items="'+o.id+'">Manage Linked Items</button>'
+    + (o.reasoning ? '<p style="margin-top:6px;">'+escapeHtml(o.reasoning)+'</p>' : '')
+    + (score != null ? '<div class="row" style="margin-top:6px;"><span class="score-badge score-'+score+'">★ '+o.score.toFixed(1)+'/5</span></div>' : '')
+    + (o.aiRemarks ? '<p class="muted" style="margin-top:4px;">AI: '+escapeHtml(o.aiRemarks)+'</p>' : '')
+    + '<label style="display:block;margin-top:8px;">Your remarks<textarea data-outfit-remarks="'+o.id+'" placeholder="Notes about this outfit">'+escapeHtml(o.remarks||'')+'</textarea></label>'
+    + '<div class="row" style="margin-top:6px;justify-content:space-between;">'
+    + '<div class="row">'
+    + '<button class="secondary" data-save-outfit-remarks="'+o.id+'">Save Remarks</button>'
+    + (aiAvailable ? '<button class="secondary" data-ai-fill-outfit="'+o.id+'">✨ AI Score</button>' : '')
+    + '</div>'
+    + '<button class="ghost" data-delete-outfit="'+o.id+'">Delete</button>'
+    + '</div>'
+  + '</div></div>';
+}
+
+function linkItemsModalHtml(o){
+  const wardrobe = state.data.wardrobe || [];
+  const linkedIds = new Set(o.itemIds);
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Manage Linked Items</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + (wardrobe.length ? wardrobe.map(i => '<label class="link-item-row">'
+        + '<input type="checkbox" data-link-item-id="'+i.id+'" '+(linkedIds.has(i.id)?'checked':'')+'>'
+        + (i.photo ? '<img class="thumb" src="'+i.photo+'">' : '<span class="thumb"></span>')
+        + '<span>'+escapeHtml(i.name)+' <span class="muted">('+labelize(i.category)+')</span></span>'
+      + '</label>').join('') : '<p class="muted">No wardrobe items yet.</p>')
+    + '<button class="block" style="margin-top:12px;" data-save-linked-items="'+o.id+'">Save</button>'
+  + '</div></div>';
 }
 
 async function loadFashionView(){
@@ -1253,18 +1809,66 @@ document.addEventListener('submit', async (e) => {
   const submitBtn = form.querySelector('button[type="submit"]');
   submitBtn.disabled = true; submitBtn.textContent = 'Adding…';
   const r = await api('/fashion/wardrobe', { method:'POST', body: fd });
+  state.modal = null;
   await loadFashionView();
   if (state.data.aiEnabled && state.data.settings && state.data.settings.apiKeyConfigured) pollWardrobeScore(r.item.id, 8);
 });
 
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'item-filter-category') { state.itemFilters.category = e.target.value; render(); }
+  if (e.target.id === 'item-filter-color') { state.itemFilters.color = e.target.value; render(); }
+  if (e.target.id === 'item-filter-score') { state.itemFilters.minScore = e.target.value; render(); }
+});
+
 document.addEventListener('click', async (e) => {
+  if (e.target.closest('[data-action="open-add-item"]')) { state.modal = { type: 'add-wardrobe' }; state.error = null; render(); return; }
+  const viewItem = e.target.closest('[data-view-item]');
+  if (viewItem) {
+    const item = (state.data.wardrobe || []).find(i => i.id === viewItem.getAttribute('data-view-item'));
+    if (item && item.photo) { state.modal = { type: 'photo-viewer', photo: item.photo }; render(); }
+    return;
+  }
   const btn = e.target.closest('[data-remove-item]');
   if (btn) { state.modal = null; await api('/fashion/wardrobe/'+btn.getAttribute('data-remove-item'), { method:'DELETE' }); await loadFashionView(); return; }
   if (e.target.closest('[data-open-generate-outfit]')) { state.modal = { type: 'generate-outfit' }; state.error = null; render(); return; }
+  const shoppingRefresh = e.target.closest('#ai-shopping-refresh');
+  if (shoppingRefresh) {
+    shoppingRefresh.disabled = true; shoppingRefresh.textContent = 'Thinking…';
+    try {
+      const r = await api('/fashion/recommendations/ai-refresh', { method: 'POST' });
+      state.data.recommendations.aiShoppingAdvice = r.aiShoppingAdvice;
+      render();
+    } catch (err) {
+      shoppingRefresh.disabled = false;
+      alert(err.message);
+    }
+    return;
+  }
+
+  const viewOutfitPhoto = e.target.closest('[data-view-outfit-photo]');
+  if (viewOutfitPhoto) { state.modal = { type: 'photo-viewer', photo: decodeURIComponent(viewOutfitPhoto.getAttribute('data-view-outfit-photo')) }; render(); return; }
+  const outfitTile = e.target.closest('[data-outfit-id]');
+  if (outfitTile) {
+    const o = (state.data.outfits || []).find(x => x.id === outfitTile.getAttribute('data-outfit-id'));
+    if (o) { state.modal = { type: 'outfit-detail', outfit: o }; render(); }
+    return;
+  }
   const delOutfit = e.target.closest('[data-delete-outfit]');
-  if (delOutfit) { await api('/fashion/outfits/'+delOutfit.getAttribute('data-delete-outfit'), { method:'DELETE' }); await loadFashionView(); return; }
+  if (delOutfit) { state.modal = null; await api('/fashion/outfits/'+delOutfit.getAttribute('data-delete-outfit'), { method:'DELETE' }); await loadFashionView(); return; }
   const delCheck = e.target.closest('[data-delete-outfit-check]');
   if (delCheck) { await api('/fashion/outfit-checks/'+delCheck.getAttribute('data-delete-outfit-check'), { method:'DELETE' }); await loadFashionView(); return; }
+  const promoteCheck = e.target.closest('[data-promote-outfit-check]');
+  if (promoteCheck) {
+    promoteCheck.disabled = true; promoteCheck.textContent = 'Adding…';
+    try {
+      await api('/fashion/outfit-checks/'+promoteCheck.getAttribute('data-promote-outfit-check')+'/promote', { method:'POST' });
+      await loadFashionView();
+    } catch (err) {
+      promoteCheck.disabled = false; promoteCheck.textContent = 'Add to Outfits';
+      alert(err.message);
+    }
+    return;
+  }
 
   const editItem = e.target.closest('[data-edit-item]');
   if (editItem) {
@@ -1290,26 +1894,58 @@ document.addEventListener('click', async (e) => {
   if (saveRemarks) {
     const id = saveRemarks.getAttribute('data-save-outfit-remarks');
     const textarea = document.querySelector('[data-outfit-remarks="'+id+'"]');
-    await api('/fashion/outfits/'+id, { method:'PUT', body: JSON.stringify({ remarks: textarea.value }) });
-    await loadFashionView();
+    const r = await api('/fashion/outfits/'+id, { method:'PUT', body: JSON.stringify({ remarks: textarea.value }) });
+    const idx = state.data.outfits.findIndex(o => o.id === r.outfit.id);
+    if (idx !== -1) state.data.outfits[idx] = r.outfit;
+    if (state.modal && state.modal.type === 'outfit-detail') state.modal.outfit = r.outfit;
+    render();
     return;
   }
   const aiFillOutfit = e.target.closest('[data-ai-fill-outfit]');
   if (aiFillOutfit) {
     aiFillOutfit.disabled = true; aiFillOutfit.textContent = 'Scoring…';
     try {
-      await api('/fashion/outfits/'+aiFillOutfit.getAttribute('data-ai-fill-outfit')+'/ai-fill', { method:'POST' });
-      await loadFashionView();
+      const r = await api('/fashion/outfits/'+aiFillOutfit.getAttribute('data-ai-fill-outfit')+'/ai-fill', { method:'POST' });
+      const idx = state.data.outfits.findIndex(o => o.id === r.outfit.id);
+      if (idx !== -1) state.data.outfits[idx] = r.outfit;
+      if (state.modal && state.modal.type === 'outfit-detail') state.modal.outfit = r.outfit;
+      render();
     } catch (err) {
       alert(err.message);
     }
     return;
   }
-});
-
-document.addEventListener('change', (e) => {
-  if (e.target.id === 'edit-item-photo-input' && e.target.files[0]) {
-    document.getElementById('edit-item-photo-label').textContent = e.target.files[0].name;
+  const genPhoto = e.target.closest('[data-generate-outfit-photo]');
+  if (genPhoto) {
+    genPhoto.disabled = true; genPhoto.textContent = 'Generating…';
+    try {
+      const r = await api('/fashion/outfits/'+genPhoto.getAttribute('data-generate-outfit-photo')+'/generate-image', { method:'POST' });
+      const idx = state.data.outfits.findIndex(o => o.id === r.outfit.id);
+      if (idx !== -1) state.data.outfits[idx] = r.outfit;
+      if (state.modal && state.modal.type === 'outfit-detail') state.modal.outfit = r.outfit;
+      render();
+    } catch (err) {
+      alert(err.message);
+      render();
+    }
+    return;
+  }
+  const manageItems = e.target.closest('[data-manage-outfit-items]');
+  if (manageItems) {
+    const o = (state.data.outfits || []).find(x => x.id === manageItems.getAttribute('data-manage-outfit-items'));
+    if (o) { state.modal = { type: 'link-items', outfit: o }; render(); }
+    return;
+  }
+  const saveLinked = e.target.closest('[data-save-linked-items]');
+  if (saveLinked) {
+    const id = saveLinked.getAttribute('data-save-linked-items');
+    const itemIds = [...document.querySelectorAll('[data-link-item-id]:checked')].map(cb => cb.getAttribute('data-link-item-id'));
+    const r = await api('/fashion/outfits/'+id, { method:'PUT', body: JSON.stringify({ itemIds }) });
+    const idx = state.data.outfits.findIndex(o => o.id === r.outfit.id);
+    if (idx !== -1) state.data.outfits[idx] = r.outfit;
+    state.modal = { type: 'outfit-detail', outfit: r.outfit };
+    render();
+    return;
   }
 });
 
@@ -1366,6 +2002,323 @@ document.addEventListener('submit', async (e) => {
   } catch (err) { state.error = err.message; render(); }
 });
 
+/* ─── MANUAL OUTFIT BUILDER (Add Outfit) ────────────────────────────────── */
+
+function ensureOutfitBuilder(){
+  if (!state.outfitBuilder) state.outfitBuilder = { top: null, bottom: null, footwear: null, accessories: [] };
+  return state.outfitBuilder;
+}
+
+function addOutfitModalHtml(){
+  const builder = ensureOutfitBuilder();
+  const wardrobe = state.data.wardrobe || [];
+  const slotHtml = (slot) => {
+    const items = wardrobe.filter(i => slot.categories.includes(i.category));
+    const isMulti = slot.key === 'accessories';
+    return '<div class="builder-slot">'
+      + '<div class="builder-slot-label">'+slot.label+(slot.required?' <span class="builder-slot-required">*required</span>':' <span class="muted">(optional)</span>')+'</div>'
+      + (items.length
+          ? '<div class="builder-pick-grid">' + items.map(i => {
+              const selected = isMulti ? builder.accessories.includes(i.id) : builder[slot.key] === i.id;
+              return '<div class="builder-pick'+(selected?' selected':'')+'" data-builder-pick="'+slot.key+':'+i.id+'">'
+                + (i.photo ? '<img src="'+i.photo+'">' : '')
+                + '<div class="builder-pick-name">'+escapeHtml(i.name)+'</div>'
+              + '</div>';
+            }).join('') + '</div>'
+          : '<p class="muted" style="font-size:13px;">No '+labelize(slot.key)+' items in your wardrobe.</p>')
+    + '</div>';
+  };
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Add Outfit</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + OUTFIT_BUILDER_SLOTS.map(slotHtml).join('')
+    + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+    + '<button class="block" data-action="submit-add-outfit">Create Outfit</button>'
+  + '</div></div>';
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-action="open-add-outfit"]')) {
+    state.outfitBuilder = null; state.error = null; state.modal = { type: 'add-outfit' }; render(); return;
+  }
+  const pick = e.target.closest('[data-builder-pick]');
+  if (pick) {
+    const [slotKey, itemId] = pick.getAttribute('data-builder-pick').split(':');
+    const builder = ensureOutfitBuilder();
+    if (slotKey === 'accessories') {
+      const i = builder.accessories.indexOf(itemId);
+      if (i === -1) builder.accessories.push(itemId); else builder.accessories.splice(i, 1);
+    } else {
+      builder[slotKey] = builder[slotKey] === itemId ? null : itemId;
+    }
+    render();
+  }
+});
+
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('[data-action="submit-add-outfit"]')) return;
+  const builder = ensureOutfitBuilder();
+  if (!builder.top || !builder.bottom) { state.error = 'Please upload a top and bottom to generate outfit.'; render(); return; }
+  const itemIds = [builder.top, builder.bottom, builder.footwear, ...builder.accessories].filter(Boolean);
+  try {
+    await api('/fashion/outfits/manual', { method: 'POST', body: JSON.stringify({ itemIds }) });
+    state.outfitBuilder = null; state.modal = null; state.error = null;
+    await loadFashionView();
+  } catch (err) { state.error = err.message; render(); }
+});
+
+/* ─── HABIT ─────────────────────────────────────────────────────────────── */
+
+const HABIT_RECURRENCE_LABELS = { daily: 'Every day', weekly: 'Specific days', once: 'One time' };
+
+function habitRecurrenceSummary(r){
+  r = r || { type: 'daily' };
+  if (r.type === 'daily') return 'Every day';
+  if (r.type === 'weekly') return (r.days||[]).map(d=>d.slice(0,3)).join(', ') || 'Pick days';
+  if (r.type === 'once') return 'Once on ' + new Date(r.date).toLocaleDateString();
+  return '';
+}
+function isHabitDueOn(habit, dateStr, weekdayName){
+  const r = habit.recurrence || { type: 'daily' };
+  if (r.type === 'daily') return true;
+  if (r.type === 'weekly') return (r.days||[]).includes(weekdayName);
+  if (r.type === 'once') return r.date === dateStr;
+  return false;
+}
+function isHabitDueToday(habit){
+  const now = new Date();
+  return isHabitDueOn(habit, now.toISOString().slice(0,10), WEEKDAYS[(now.getDay()+6)%7]);
+}
+function isHabitCompletedToday(habit){
+  return (habit.completions||[]).includes(new Date().toISOString().slice(0,10));
+}
+
+function habitRowHtml(h){
+  const done = isHabitCompletedToday(h);
+  const due = isHabitDueToday(h);
+  return '<div class="habit-row'+(done?' done':'')+'" data-habit-id="'+h.id+'">'
+    + '<span class="habit-check" data-habit-check="'+h.id+'">'+(done?'✓':'')+'</span>'
+    + '<div style="flex:1;">'
+      + '<div class="habit-name">'+escapeHtml(h.name)+'</div>'
+      + '<div class="habit-meta">'+h.durationMinutes+' min · '+habitRecurrenceSummary(h.recurrence)+(due?'':' · not due today')+'</div>'
+    + '</div>'
+    + '<button class="icon-btn" data-edit-habit="'+h.id+'">'+ICONS.edit+'</button>'
+  + '</div>';
+}
+
+VIEWS['habit'] = () => {
+  const habits = state.data.habits || [];
+  return '<h1>Habits</h1>'
+  + (habits.length
+      ? '<div class="card">' + habits.map(habitRowHtml).join('') + '</div>'
+      : '<p class="muted">No to-do items yet — tap + to add one.</p>')
+  + '<button class="fab" data-action="open-add-habit" aria-label="Add Habit">+</button>';
+};
+
+function ensureHabitDraft(h){
+  if (!state.habitDraft) {
+    state.habitDraft = h
+      ? { id: h.id, name: h.name, durationMinutes: h.durationMinutes, recurrenceType: h.recurrence.type, days: (h.recurrence.days||[]).slice(), date: h.recurrence.date || new Date().toISOString().slice(0,10) }
+      : { id: null, name: '', durationMinutes: 10, recurrenceType: 'daily', days: [], date: new Date().toISOString().slice(0,10) };
+  }
+  return state.habitDraft;
+}
+
+function habitFormModalHtml(isEdit){
+  const draft = ensureHabitDraft();
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>'+(isEdit?'Edit':'Add')+' Habit</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<form data-form="habit" class="col">'
+    + '<label>Name<input type="text" id="habit-name" value="'+escapeHtml(draft.name)+'" required></label>'
+    + '<label>Duration (minutes)<input type="number" id="habit-duration" min="1" value="'+draft.durationMinutes+'"></label>'
+    + '<label>Recurrence<select id="habit-recurrence-type">'
+      + Object.entries(HABIT_RECURRENCE_LABELS).map(([k,l])=>'<option value="'+k+'" '+(draft.recurrenceType===k?'selected':'')+'>'+l+'</option>').join('')
+    + '</select></label>'
+    + (draft.recurrenceType === 'weekly'
+        ? '<div class="row" style="flex-wrap:wrap;gap:10px;">' + WEEKDAYS.map(d => '<label class="row" style="gap:4px;"><input type="checkbox" data-habit-day="'+d+'" '+(draft.days.includes(d)?'checked':'')+'><span style="font-size:12px;">'+d.slice(0,3)+'</span></label>').join('') + '</div>'
+        : '')
+    + (draft.recurrenceType === 'once'
+        ? '<label>Date<input type="date" id="habit-once-date" value="'+draft.date+'"></label>'
+        : '')
+    + (state.error ? '<p class="error">'+escapeHtml(state.error)+'</p>' : '')
+    + '<button class="block" type="submit" style="margin-top:8px;">Save</button>'
+    + (isEdit ? '<button type="button" class="danger block" style="margin-top:6px;" data-delete-habit="'+draft.id+'">Delete</button>' : '')
+    + '</form></div></div>';
+}
+
+function habitDetailModalHtml(h){
+  const done = isHabitCompletedToday(h);
+  return '<div class="overlay"><div class="sheet center">'
+    + '<div class="row" style="justify-content:space-between;"><h2>'+escapeHtml(h.name)+'</h2><button class="close-x" data-close-modal>✕</button></div>'
+    + '<p class="muted">'+h.durationMinutes+' min · '+habitRecurrenceSummary(h.recurrence)+'</p>'
+    + (done ? '<p class="pill accent">✓ Completed today</p>' : '')
+    + '<button class="block" style="margin-top:10px;" data-start-focus-timer="'+h.id+'">'+ICONS.play+' Run Focus Timer</button>'
+    + '<div class="row" style="justify-content:center;margin-top:10px;">'
+    + '<button class="secondary" data-edit-habit="'+h.id+'">Edit</button>'
+    + '<button class="danger" data-delete-habit="'+h.id+'">Delete</button>'
+    + '</div>'
+  + '</div></div>';
+}
+
+const FOCUS_TIMER_R = 100;
+const FOCUS_TIMER_CIRCUMFERENCE = 2 * Math.PI * FOCUS_TIMER_R;
+let focusTimerHandle = null;
+function stopFocusTimer(){ if (focusTimerHandle) { clearInterval(focusTimerHandle); focusTimerHandle = null; } }
+
+function focusTimerModalHtml(m){
+  return '<div class="overlay focus-timer-overlay" id="focus-timer-overlay">'
+    + '<button class="close-x" style="position:fixed;top:calc(env(safe-area-inset-top) + 14px);right:14px;" data-action="cancel-focus-timer">✕</button>'
+    + '<div class="focus-timer-name">'+escapeHtml(m.habit.name)+'</div>'
+    + '<div class="focus-timer-ring">'
+      + '<svg viewBox="0 0 220 220"><circle class="track" cx="110" cy="110" r="'+FOCUS_TIMER_R+'"></circle>'
+      + '<circle class="progress" id="focus-timer-circle" cx="110" cy="110" r="'+FOCUS_TIMER_R+'" stroke-dasharray="'+FOCUS_TIMER_CIRCUMFERENCE+'" stroke-dashoffset="0"></circle></svg>'
+      + '<div class="focus-timer-remaining" id="focus-timer-remaining">'+formatElapsed(m.remainingSeconds*1000)+'</div>'
+    + '</div>'
+    + '<button class="secondary" data-action="cancel-focus-timer">Cancel</button>'
+  + '</div>';
+}
+
+function focusTimerDoneModalHtml(m){
+  return '<div class="overlay"><div class="sheet center">'
+    + '<div class="step-icon">'+ICONS.flag+'</div>'
+    + '<h2>Nice work!</h2>'
+    + '<p>You completed <b>'+escapeHtml(m.habit.name)+'</b>. Keep the streak going!</p>'
+    + '<button class="block" data-close-modal>Done</button>'
+  + '</div></div>';
+}
+
+function startFocusTimerTick(){
+  stopFocusTimer();
+  focusTimerHandle = setInterval(async () => {
+    if (!state.modal || state.modal.type !== 'focus-timer') { stopFocusTimer(); return; }
+    state.modal.remainingSeconds--;
+    const remEl = document.getElementById('focus-timer-remaining');
+    if (remEl) remEl.textContent = formatElapsed(Math.max(0,state.modal.remainingSeconds)*1000);
+    const circle = document.getElementById('focus-timer-circle');
+    if (circle) {
+      const frac = Math.max(0, state.modal.remainingSeconds / state.modal.totalSeconds);
+      circle.setAttribute('stroke-dashoffset', String(FOCUS_TIMER_CIRCUMFERENCE * (1 - frac)));
+    }
+    if (state.modal.remainingSeconds <= 0) {
+      stopFocusTimer();
+      await completeFocusTimer();
+    }
+  }, 1000);
+}
+
+async function completeFocusTimer(){
+  const m = state.modal;
+  if (!m || m.type !== 'focus-timer') return;
+  try {
+    const r = await api('/habits/'+m.habit.id+'/complete', { method:'POST', body: JSON.stringify({}) });
+    const idx = (state.data.habits||[]).findIndex(h => h.id === r.habit.id);
+    if (idx !== -1) state.data.habits[idx] = r.habit;
+  } catch (_) { /* completion marking is best-effort; timer still finished */ }
+  state.modal = { type: 'focus-timer-done', habit: m.habit };
+  render();
+}
+
+async function loadHabitView(){
+  const r = await api('/habits');
+  state.data.habits = r.habits;
+  render();
+}
+
+document.addEventListener('click', async (e) => {
+  if (e.target.closest('[data-action="open-add-habit"]')) { state.habitDraft = null; state.error = null; state.modal = { type: 'add-habit' }; render(); return; }
+
+  const habitCheck = e.target.closest('[data-habit-check]');
+  if (habitCheck) {
+    const id = habitCheck.getAttribute('data-habit-check');
+    const habit = (state.data.habits||[]).find(h => h.id === id);
+    if (!habit) return;
+    const done = isHabitCompletedToday(habit);
+    const today = new Date().toISOString().slice(0,10);
+    const r = done
+      ? await api('/habits/'+id+'/complete/'+today, { method: 'DELETE' })
+      : await api('/habits/'+id+'/complete', { method: 'POST', body: JSON.stringify({}) });
+    const idx = state.data.habits.findIndex(h => h.id === r.habit.id);
+    if (idx !== -1) state.data.habits[idx] = r.habit;
+    render();
+    return;
+  }
+
+  const editHabitBtn = e.target.closest('[data-edit-habit]');
+  if (editHabitBtn) {
+    const habit = (state.data.habits||[]).find(h => h.id === editHabitBtn.getAttribute('data-edit-habit'));
+    if (habit) { state.habitDraft = null; ensureHabitDraft(habit); state.error = null; state.modal = { type: 'edit-habit' }; render(); }
+    return;
+  }
+
+  const deleteHabitBtn = e.target.closest('[data-delete-habit]');
+  if (deleteHabitBtn) {
+    await api('/habits/'+deleteHabitBtn.getAttribute('data-delete-habit'), { method: 'DELETE' });
+    state.modal = null;
+    await loadHabitView();
+    return;
+  }
+
+  const startTimerBtn = e.target.closest('[data-start-focus-timer]');
+  if (startTimerBtn) {
+    const habit = (state.data.habits||[]).find(h => h.id === startTimerBtn.getAttribute('data-start-focus-timer'));
+    if (!habit) return;
+    const totalSeconds = habit.durationMinutes * 60;
+    state.modal = { type: 'focus-timer', habit, remainingSeconds: totalSeconds, totalSeconds };
+    render();
+    startFocusTimerTick();
+    return;
+  }
+  if (e.target.closest('[data-action="cancel-focus-timer"]')) { stopFocusTimer(); state.modal = null; render(); return; }
+
+  // Row click (not the check circle or edit button) opens the detail/timer-launch modal.
+  const habitRow = e.target.closest('[data-habit-id]');
+  if (habitRow && !e.target.closest('[data-habit-check]') && !e.target.closest('[data-edit-habit]')) {
+    const habit = (state.data.habits||[]).find(h => h.id === habitRow.getAttribute('data-habit-id'));
+    if (habit) { state.modal = { type: 'habit-detail', habit }; render(); }
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'habit-recurrence-type' && state.modal && (state.modal.type === 'add-habit' || state.modal.type === 'edit-habit')) {
+    ensureHabitDraft().recurrenceType = e.target.value;
+    render();
+    return;
+  }
+  const dayBox = e.target.closest('[data-habit-day]');
+  if (dayBox && state.habitDraft) {
+    const day = dayBox.getAttribute('data-habit-day');
+    const days = state.habitDraft.days;
+    const idx = days.indexOf(day);
+    if (dayBox.checked && idx === -1) days.push(day);
+    else if (!dayBox.checked && idx !== -1) days.splice(idx, 1);
+  }
+});
+
+document.addEventListener('input', (e) => {
+  if (!state.habitDraft) return;
+  if (e.target.id === 'habit-name') state.habitDraft.name = e.target.value;
+  if (e.target.id === 'habit-duration') state.habitDraft.durationMinutes = Number(e.target.value) || state.habitDraft.durationMinutes;
+  if (e.target.id === 'habit-once-date') state.habitDraft.date = e.target.value;
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('[data-form="habit"]');
+  if (!form) return;
+  e.preventDefault();
+  const draft = state.habitDraft;
+  if (!draft.name.trim()) { state.error = 'Name required.'; render(); return; }
+  if (draft.recurrenceType === 'weekly' && !draft.days.length) { state.error = 'Pick at least one day.'; render(); return; }
+  const recurrence = draft.recurrenceType === 'weekly' ? { type: 'weekly', days: draft.days }
+    : draft.recurrenceType === 'once' ? { type: 'once', date: draft.date }
+    : { type: 'daily' };
+  const body = { name: draft.name.trim(), durationMinutes: draft.durationMinutes, recurrence };
+  try {
+    if (draft.id) await api('/habits/'+draft.id, { method: 'PUT', body: JSON.stringify(body) });
+    else await api('/habits', { method: 'POST', body: JSON.stringify(body) });
+    state.habitDraft = null; state.modal = null; state.error = null;
+    await loadHabitView();
+  } catch (err) { state.error = err.message; render(); }
+});
+
 /* ─── SETTINGS ──────────────────────────────────────────────────────────── */
 
 const AI_PROVIDER_LABELS = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (GPT)', 'openai-compatible': 'Other (OpenAI-compatible)' };
@@ -1375,6 +2328,60 @@ function ensureAiDraft(){
   if (!state.aiDraft) state.aiDraft = { provider: s.aiProvider || 'anthropic', apiKey: '', baseUrl: s.aiBaseUrl || '', model: s.aiModel || '' };
   return state.aiDraft;
 }
+
+const IMAGE_GEN_PROVIDER_LABELS = { openai: 'OpenAI (gpt-image-1)', gemini: 'Google Gemini' };
+
+function ensureImageGenDraft(){
+  const s = state.data.settings || {};
+  if (!state.imageGenDraft) state.imageGenDraft = { provider: s.imageGenProvider || '', apiKey: '', model: s.imageGenModel || '' };
+  return state.imageGenDraft;
+}
+
+function imageGenSettingsCardHtml(){
+  const s = state.data.settings || {};
+  const keyConfigured = s.imageGenApiKeyConfigured;
+  const draft = ensureImageGenDraft();
+  return '<div class="card"><h3>Outfit Image Generation</h3>'
+    + '<p>Pick a provider that can generate images (separate from your text/vision AI key above) to auto-create a "wearing this outfit" photo for every outfit.</p>'
+    + '<form data-form="image-gen-settings" class="col">'
+    + '<label>Provider<select name="provider" data-imagegen-field="provider">'
+      + '<option value="">None (feature disabled)</option>'
+      + Object.entries(IMAGE_GEN_PROVIDER_LABELS).map(([v,l]) => '<option value="'+v+'" '+(draft.provider===v?'selected':'')+'>'+l+'</option>').join('')
+    + '</select></label>'
+    + (draft.provider ? '<label>API Key<input type="password" name="apiKey" data-imagegen-field="apiKey" value="'+escapeHtml(draft.apiKey)+'" placeholder="'+(keyConfigured ? 'Key saved — enter a new one to replace it' : 'Paste your API key')+'"></label>' : '')
+    + (draft.provider ? '<label>Model (optional)<input type="text" name="model" data-imagegen-field="model" value="'+escapeHtml(draft.model)+'" placeholder="'+(draft.provider==='openai' ? 'gpt-image-1 (default)' : 'gemini-2.5-flash-image (default)')+'"></label>' : '')
+    + (state.imageGenError ? '<p class="error">'+escapeHtml(state.imageGenError)+'</p>' : '')
+    + '<div class="row">'
+    + '<button type="submit">Save</button>'
+    + (keyConfigured ? '<button type="button" class="secondary" data-clear-imagegen-key>Remove Key</button>' : '')
+    + '</div>'
+    + '<p class="muted">'+(keyConfigured ? '✓ '+IMAGE_GEN_PROVIDER_LABELS[s.imageGenProvider]+' key configured.' : 'Not configured — outfit photo generation needs to be set up here first.')+'</p>'
+    + '</form></div>';
+}
+
+function motivationsSettingsCardHtml(){
+  const m = state.data.motivations;
+  const count = (m && m.items && m.items.length) || 0;
+  const syncedAt = m && m.syncedAt;
+  return '<div class="card"><h3>Motivations</h3>'
+    + '<p>'+count+' quote'+(count===1?'':'s')+' shown randomly on your Home screen. '+(syncedAt ? 'Last synced '+new Date(syncedAt).toLocaleDateString()+'.' : 'Using the built-in starter set.')+'</p>'
+    + '<button class="secondary block" id="sync-motivations-btn">✨ Sync Motivations</button>'
+  + '</div>';
+}
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('#sync-motivations-btn');
+  if (!btn) return;
+  btn.disabled = true; btn.textContent = 'Syncing…';
+  try {
+    const r = await api('/motivations/sync', { method: 'POST' });
+    state.data.motivations = r.motivations;
+    render();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = '✨ Sync Motivations';
+    alert(err.message);
+  }
+});
 
 VIEWS['settings'] = () => {
   const s = state.data.settings || {};
@@ -1420,6 +2427,8 @@ VIEWS['settings'] = () => {
         + '<p class="muted">'+(apiKeyConfigured ? '✓ '+AI_PROVIDER_LABELS[s.aiProvider]+' key configured.' : 'No key configured yet — AI features are disabled.')+'</p>'
         + '</form></div>'
       : aiDisabledPlaceholder('AI Features', 'AI features have been turned off by the administrator for all users.'))
+  + (state.data.aiEnabled ? imageGenSettingsCardHtml() : '')
+  + motivationsSettingsCardHtml()
   + '<div class="card"><h3>Change PIN</h3>'
     + '<button data-nav="change-pin">Change PIN</button></div>'
   + (session.isAdmin ? adminHtml() : '')
@@ -1443,6 +2452,11 @@ function adminHtml(){
 }
 
 async function loadSettingsView(){
+  if (!state.data.motivations) {
+    const m = await api('/motivations');
+    state.data.motivations = m.motivations;
+    render();
+  }
   if (session.isAdmin) {
     const r = await api('/users');
     state.data.users = r.users;
@@ -1484,6 +2498,12 @@ document.addEventListener('click', async (e) => {
     render();
     return;
   }
+  if (e.target.closest('[data-clear-imagegen-key]')) {
+    const r = await api('/settings/image-gen', { method:'PUT', body: JSON.stringify({ apiKey: null }) });
+    state.data.settings = r.settings;
+    render();
+    return;
+  }
   const toggleBtn = e.target.closest('[data-toggle-admin]');
   if (toggleBtn) {
     const name = toggleBtn.getAttribute('data-toggle-admin');
@@ -1505,11 +2525,17 @@ document.addEventListener('change', (e) => {
     ensureAiDraft().provider = e.target.value;
     render();
   }
+  if (e.target.getAttribute && e.target.getAttribute('data-imagegen-field') === 'provider') {
+    ensureImageGenDraft().provider = e.target.value;
+    render();
+  }
 });
 
 document.addEventListener('input', (e) => {
   const field = e.target.getAttribute && e.target.getAttribute('data-ai-field');
   if (field && field !== 'provider') ensureAiDraft()[field] = e.target.value;
+  const imagegenField = e.target.getAttribute && e.target.getAttribute('data-imagegen-field');
+  if (imagegenField && imagegenField !== 'provider') ensureImageGenDraft()[imagegenField] = e.target.value;
 });
 
 document.addEventListener('submit', async (e) => {
@@ -1532,6 +2558,25 @@ document.addEventListener('submit', async (e) => {
     render();
     return;
   }
+  const imageGenForm = e.target.closest('[data-form="image-gen-settings"]');
+  if (imageGenForm) {
+    e.preventDefault();
+    const draft = state.imageGenDraft;
+    const providerChanged = draft.provider !== (state.data.settings.imageGenProvider || '');
+    if (draft.provider && providerChanged && !draft.apiKey) {
+      state.imageGenError = 'Enter an API key for the new provider.';
+      render();
+      return;
+    }
+    const body = { provider: draft.provider || null, model: draft.model || null };
+    if (draft.apiKey) body.apiKey = draft.apiKey;
+    const r = await api('/settings/image-gen', { method:'PUT', body: JSON.stringify(body) });
+    state.data.settings = r.settings;
+    state.imageGenDraft = { provider: r.settings.imageGenProvider || '', apiKey: '', model: r.settings.imageGenModel || '' };
+    state.imageGenError = null;
+    render();
+    return;
+  }
   const form = e.target.closest('[data-form="add-user"]');
   if (!form) return;
   e.preventDefault();
@@ -1547,9 +2592,9 @@ document.addEventListener('submit', async (e) => {
 
 const MUSCLE_GROUPS = ['chest','back','legs','core','shoulders','arms','cardio'];
 
-VIEWS['workout-maintenance'] = () => {
-  return '<h1>Workout Maintenance</h1><p>Admin-only: edit the exercise library, tag Home Workouts, and add reference photos or videos.</p>'
-  + '<div class="card"><h3>Add Exercise</h3>'
+function addExerciseModalHtml(){
+  return '<div class="overlay"><div class="sheet">'
+    + '<div class="row" style="justify-content:space-between;"><h2>Add Exercise</h2><button class="close-x" data-close-modal>✕</button></div>'
     + '<form data-form="add-exercise" class="col">'
     + '<label class="upload-box">'+ICONS.camera+'<div class="muted" style="margin-top:6px;" id="exercise-photo-label">Reference photo (optional)</div><input type="file" name="image" accept="image/*" style="display:none;" id="exercise-photo-input"></label>'
     + '<div class="grid2">'
@@ -1568,19 +2613,32 @@ VIEWS['workout-maintenance'] = () => {
     + '<label class="row" style="gap:8px;"><input type="checkbox" name="homeFriendly"> <span>Home Workout (no equipment needed)</span></label>'
     + '<label>Instructions<textarea name="instructions" placeholder="Step-by-step instructions"></textarea></label>'
     + '<button type="submit">Add Exercise</button>'
-    + '</form></div>'
+    + '</form></div></div>';
+}
+
+function requiredEquipmentRowHtml(ex){
+  return '<div class="row" style="gap:6px;padding:0 0 11px;border-bottom:1px solid var(--border);">'
+    + '<span class="muted" style="font-size:12px;">Requires:</span>'
+    + (ex.equipment === 'none' ? '<span class="pill">Bodyweight only</span>' : '<span class="pill">'+labelize(ex.equipment)+'</span>')
+  + '</div>';
+}
+
+VIEWS['workout-maintenance'] = () => {
+  return '<h1>Workout Maintenance</h1><p>Admin-only: edit the exercise library, tag Home Workouts, and add reference photos or videos.</p>'
   + '<div class="card"><div class="row" style="justify-content:space-between;">'
     + '<h3 style="margin-bottom:0;">Existing Exercises ('+(state.data.exercises||[]).length+')</h3>'
     + '<button class="secondary" data-action="get-workouts">Get Workouts</button>'
     + '</div>'
-    + (state.data.exercises||[]).map(ex => '<div class="list-item">'
+    + (state.data.exercises||[]).map(ex => '<div class="list-item" style="border-bottom:none;padding-bottom:2px;">'
       + '<span class="row" style="gap:10px;"><img class="thumb" src="'+(ex.image||'')+'" onerror="this.style.visibility=\'hidden\'"><span>'+escapeHtml(ex.name)+' <span class="pill">'+labelize(ex.muscleGroup)+'</span>'+(ex.homeFriendly?' <span class="pill accent">Home</span>':'')+'</span></span>'
       + '<span class="row" style="gap:6px;">'
       + iconBtn('edit', '', 'data-edit-exercise="'+ex.id+'"')
       + iconBtn('trash', 'danger', 'data-delete-exercise="'+ex.id+'"')
       + '</span>'
-    + '</div>').join('')
-  + '</div>';
+    + '</div>'
+    + requiredEquipmentRowHtml(ex)).join('')
+  + '</div>'
+  + '<button class="fab" data-action="open-add-exercise" aria-label="Add Exercise">+</button>';
 };
 
 function editExerciseModalHtml(ex){
@@ -1629,10 +2687,12 @@ document.addEventListener('submit', async (e) => {
   const homeChecked = form.querySelector('[name="homeFriendly"]').checked;
   fd.set('homeFriendly', homeChecked ? 'true' : 'false');
   await api('/exercises', { method:'POST', body: fd });
+  state.modal = null;
   await loadWorkoutMaintenanceView();
 });
 
 document.addEventListener('click', async (e) => {
+  if (e.target.closest('[data-action="open-add-exercise"]')) { state.modal = { type: 'add-exercise' }; render(); return; }
   const getBtn = e.target.closest('[data-action="get-workouts"]');
   if (getBtn) {
     getBtn.disabled = true; getBtn.textContent = 'Syncing…';
@@ -1748,8 +2808,10 @@ document.addEventListener('submit', async (e) => {
 
 function bindActiveView(){
   if (state.view === 'login-select') loadAccounts();
+  if (state.view === 'dashboard') loadDashboardExtras();
   if (state.view === 'fitness') loadFitnessView();
   if (state.view === 'fashion' || state.view === 'fashion-items' || state.view === 'fashion-outfits') loadFashionView();
+  if (state.view === 'habit') loadHabitView();
   if (state.view === 'settings') loadSettingsView();
   if (state.view === 'workout-maintenance') loadWorkoutMaintenanceView();
   if (state.view === 'monitoring') loadMonitoringView();
