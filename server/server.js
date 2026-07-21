@@ -1786,4 +1786,4 @@ app.delete('/fashion/outfits/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => console.log(`PersonalFitness server listening on :${PORT}`));
+app.listen(PORT, () => console.log(`Fromesco server listening on :${PORT}`));

@@ -1,6 +1,6 @@
 # Fromesco
 
-A personal Profile / Fitness / Fashion PWA, self-hosted on the home Debian server (ARM-64, `192.168.100.160`). Project/folder name stayed `PersonalFitness`; the product itself is branded **Fromesco**.
+A personal Profile / Fitness / Fashion PWA, self-hosted on the home Debian server (ARM-64, `192.168.100.160`). Project/folder name and product are both **Fromesco**.
 
 ## Access
 
@@ -41,24 +41,25 @@ Modeled directly on the PhotoVault app already running on this box — no build 
 
 | | |
 |---|---|
-| Backend service | `personalfitness.service` (systemd, runs as `www-data`, port 3003) |
-| Nginx site | `/etc/nginx/sites-available/personalfitness` (port 8446 SSL, `client_max_body_size 10M` for photo uploads) |
+| Backend service | `fromesco.service` (systemd, runs as `www-data`, port 3003) |
+| Nginx site | `/etc/nginx/sites-available/fromesco` (port 8446 SSL, `client_max_body_size 10M` for photo uploads) |
 | Static root | `client/` served directly from this share |
 | Data file | `info.json` at repo root |
+| Path | `/mnt/disk1/system/Fromesco` (SMB share `CSTMEDIA A`, mapped as `Z:\system\Fromesco`) |
 
 Common ops (via `ssh rjay@192.168.100.160`):
 
 ```bash
 # restart backend after editing server.js
-sudo systemctl restart personalfitness
+sudo systemctl restart fromesco
 
 # tail logs
-sudo journalctl -u personalfitness -f
+sudo journalctl -u fromesco -f
 
 # after editing nginx config
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Since this folder is the SMB share backing the server, editing files here (client or server) takes effect immediately for static files; server-side changes need a `systemctl restart personalfitness` to take effect.
+Since this folder is the SMB share backing the server, editing files here (client or server) takes effect immediately for static files; server-side changes need a `systemctl restart fromesco` to take effect.
 
 **Note:** the underlying disk (`/mnt/disk1`) is exFAT, which doesn't support symlinks — always run `npm install --no-bin-links` in `server/` if dependencies change.
