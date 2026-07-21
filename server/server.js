@@ -16,7 +16,7 @@ const AI_MODEL = 'claude-opus-4-8';
 // Bump this on every deploy that ships client-visible changes — the client
 // polls /info on load and force-refreshes (clearing all caches) when this
 // changes, so installed PWAs pick up new code without a manual reinstall.
-const APP_VERSION = '1.6.1';
+const APP_VERSION = '1.7.1';
 
 // ─── DEFAULT DATA ─────────────────────────────────────────────────────────────
 

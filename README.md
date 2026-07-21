@@ -6,7 +6,7 @@ A personal Profile / Fitness / Fashion PWA, self-hosted on the home Debian serve
 
 **URL:** https://192.168.100.160:8446
 
-- Uses a self-signed cert (same one PhotoVault uses) — your browser will warn once, accept/continue.
+- Uses a cert issued by a local `mkcert` CA (same cert file PhotoVault uses) — **install the root CA once per device** so both the browser and OS fully trust it: visit `https://192.168.100.160:8446/ca.crt`, install the profile/certificate, and (iOS only) enable full trust for it under Settings → General → About → Certificate Trust Settings. See [Certificates](#certificates) below for why this matters and full per-OS steps.
 - Pick your user, enter your PIN.
 - After PIN setup, you'll be walked through the Profile onboarding wizard before the Dashboard unlocks.
 - Installable as a PWA (Add to Home Screen / desktop install icon) — works on mobile and desktop, zoom is locked so it feels native.
@@ -63,3 +63,16 @@ sudo nginx -t && sudo systemctl reload nginx
 Since this folder is the SMB share backing the server, editing files here (client or server) takes effect immediately for static files; server-side changes need a `systemctl restart fromesco` to take effect.
 
 **Note:** the underlying disk (`/mnt/disk1`) is exFAT, which doesn't support symlinks — always run `npm install --no-bin-links` in `server/` if dependencies change.
+
+### Certificates
+
+`/etc/nginx/ssl/server.crt` + `server.key` are issued by a local `mkcert` CA (installed via `apt`), not self-signed — this is shared between Fromesco (8446) and PhotoVault (8445). Self-signed certs that are only "clicked through" in-browser (never OS-trusted) actively break PWA icon delivery: iOS Safari won't use `apple-touch-icon` at all against an untrusted cert (plain HTTP is actually fine for this — it's specifically self-signed HTTPS that's the trap), and Android Chrome's WebAPK minting (what gives an installed PWA a real home-screen icon instead of a plain bookmark) also requires a trusted chain. Dropping to HTTP isn't a fix either: Android's installability criteria hard-require HTTPS, and service workers (used here for offline caching + auto-update) refuse to run outside a secure context at all.
+
+The CA root (`~/.local/share/mkcert/rootCA.pem` on the server, private key never leaves the box) is served read-only at `/ca.crt` on the Fromesco site for per-device install:
+
+- **iOS:** visit `https://192.168.100.160:8446/ca.crt` in Safari → Allow → install the downloaded profile (Settings → *Profile Downloaded*, enter passcode, Install again to confirm) → then **Settings → General → About → Certificate Trust Settings** → toggle full trust on for the mkcert CA. Without this last step the profile installs but isn't actually trusted for TLS.
+- **Android:** visit the same URL in Chrome → download the `.crt` → Settings → Security → Encryption & credentials → Install a certificate → CA certificate → select the downloaded file. Android will show a generic "network may be monitored" warning for any custom CA — expected and safe here, it's a CA you generated yourself for this one box.
+
+Do this once per device (yours, family members'). After installing, **remove and re-add any existing home-screen icon** for the app — both iOS and Android cache whatever icon they captured on first install and won't refetch it just because the cert changed.
+
+Leaf cert expires 2028-10-21; regenerate with `mkcert -cert-file /etc/nginx/ssl/server.crt -key-file /etc/nginx/ssl/server.key 192.168.100.160` (as `rjay`, then `sudo` the files into place) and `sudo systemctl reload nginx`. The original self-signed cert is kept at `server.crt.selfsigned-bak` / `server.key.selfsigned-bak` for rollback.

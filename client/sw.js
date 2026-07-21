@@ -28,6 +28,8 @@ self.addEventListener('fetch', (e) => {
 
   // App shell (HTML) — always try the network first so deploys show up
   // immediately; fall back to the last cached copy only when offline.
+  // respondWith() must always resolve to a real Response — resolving to
+  // undefined (e.g. a cache miss on the fallback path) throws in Safari.
   const isAppShell = e.request.mode === 'navigate' || url.endsWith('/') || url.endsWith('/index.html');
   if (isAppShell) {
     e.respondWith(
@@ -35,7 +37,10 @@ self.addEventListener('fetch', (e) => {
         const copy = res.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, copy));
         return res;
-      }).catch(() => caches.match(e.request))
+      }).catch(async () => {
+        const cached = await caches.match(e.request) || await caches.match('/index.html');
+        return cached || new Response('<h1>Offline</h1><p>Fromesco is unreachable right now.</p>', { status: 503, headers: { 'Content-Type': 'text/html' } });
+      })
     );
     return;
   }
@@ -43,7 +48,7 @@ self.addEventListener('fetch', (e) => {
   // Everything else (icons, css, js, images) — cache-first is fine, they're
   // versioned by filename or change rarely.
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => new Response('', { status: 504 })))
   );
 });
 

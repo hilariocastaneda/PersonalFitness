@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0a0a0a" />
 <link rel="manifest" href="/manifest.json" />
 <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Fromesco" />
@@ -236,11 +237,11 @@
 const LOGO_SVG = '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">'
   + '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#fb923c"/></linearGradient></defs>'
   + '<rect width="512" height="512" rx="112" fill="#0a0a0a"/>'
-  + '<g fill="none" stroke="url(#g)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">'
-  + '<path d="M256 118 C256 96 232 92 232 114 C232 132 256 138 256 156"/>'
-  + '<path d="M256 156 L140 268 L372 268"/>'
-  + '<line x1="104" y1="300" x2="408" y2="300"/></g>'
-  + '<g fill="url(#g)"><rect x="80" y="272" width="34" height="56" rx="10"/><rect x="398" y="272" width="34" height="56" rx="10"/></g>'
+  + '<rect x="180" y="140" width="56" height="232" rx="20" fill="url(#g)"/>'
+  + '<rect x="180" y="140" width="150" height="54" rx="20" fill="url(#g)"/>'
+  + '<rect x="180" y="234" width="120" height="50" rx="20" fill="url(#g)"/>'
+  + '<circle cx="366" cy="340" r="38" fill="none" stroke="url(#g)" stroke-width="10"/>'
+  + '<path d="M348 340 L360 352 L384 326" fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>'
   + '</svg>';
 
 function brandHtml(){ return '<div class="brand">'+LOGO_SVG+'<span>Fromesco</span></div>'; }
@@ -343,16 +344,27 @@ function labelize(s){ return String(s).replace(/([A-Z])/g,' $1').replace(/^./, c
 VIEWS['login-select'] = () => brandHtml() + '<h1>Who\'s using this?</h1><div class="card" id="account-list"><p class="muted">Loading users…</p></div>';
 
 async function loadAccounts(){
+  const list = document.getElementById('account-list');
+  if (!list) return;
   try {
     const r = await api('/accounts');
-    const list = document.getElementById('account-list');
-    if (!list) return;
     if (!r.accounts.length) { list.innerHTML = '<p class="muted">No users yet.</p>'; return; }
     list.innerHTML = r.accounts.map(a =>
       '<div class="list-item"><span>'+escapeHtml(a.name)+'</span><button data-select-user="'+escapeHtml(a.name)+'">Select</button></div>'
     ).join('');
-  } catch(e) {}
+  } catch(e) {
+    list.innerHTML = '<p class="error">Couldn\'t load users. '+escapeHtml(e.message||'')+'</p><button class="secondary block" data-retry-accounts style="margin-top:8px;">Retry</button>';
+  }
 }
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-retry-accounts]')) {
+    const list = document.getElementById('account-list');
+    if (list) list.innerHTML = '<p class="muted">Loading users…</p>';
+    loadAccounts();
+    return;
+  }
+});
 
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-select-user]');
@@ -615,7 +627,7 @@ document.addEventListener('submit', async (e) => {
   try {
     const r = await api('/profile', { method:'PUT', body: JSON.stringify(payload) });
     state.data.profile = r.profile; state.data.bmi = r.bmi; state.data.fitnessScore = r.fitnessScore; state.error = null;
-    if (isLast) go('dashboard');
+    if (isLast) { go('dashboard'); applyPendingUpdate(); }
     else { state.onboardingStep++; render(); }
   } catch (err) { state.error = err.message; render(); }
 });
@@ -1082,6 +1094,7 @@ async function finishWorkout(){
     return sum + estimateSetCalories(ex, entry.reps);
   }, 0));
   state.activeWorkout = null;
+  applyPendingUpdate();
   const [histRes, profRes] = await Promise.all([api('/fitness/history'), api('/profile')]);
   state.data.history = histRes.history;
   state.data.fitnessScore = profRes.fitnessScore;
@@ -2819,29 +2832,57 @@ function bindActiveView(){
 
 /* ─── PWA ───────────────────────────────────────────────────────────────── */
 
+let swReloadPending = false;
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+  // clients.claim() in sw.js means a new worker takes control of this page
+  // immediately, but the page itself keeps running the old JS until reloaded.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hasUnsavedWork()) { swReloadPending = true; return; }
+    location.reload();
+  });
 }
 
-// Version check — forces a full refresh (clearing Cache Storage) when the
-// server reports a different app version than what this client last saw, so
-// installed PWAs pick up new releases without a manual reinstall.
+// A hard reload mid-workout (or mid-onboarding) would silently drop in-memory
+// progress that's never persisted to localStorage — so updates are applied
+// immediately when there's nothing to lose, and deferred otherwise until the
+// workout/onboarding step that's in flight finishes (see applyPendingUpdate,
+// called from finishWorkout() and the last onboarding step).
+function hasUnsavedWork(){ return !!state.activeWorkout || state.view === 'onboarding'; }
+
+let pendingVersion = null;
 async function checkVersion(){
   try {
     const r = await fetch('/info?_='+Date.now(), { cache: 'no-store' });
     if (!r.ok) return;
     const d = await r.json();
     if (!d.version) return;
+    const version = String(d.version);
     const stored = localStorage.getItem('pf_app_version');
-    if (stored && stored !== String(d.version)) {
-      localStorage.setItem('pf_app_version', String(d.version));
-      if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
-      location.reload(true);
-      return;
-    }
-    localStorage.setItem('pf_app_version', String(d.version));
+    if (!stored) { localStorage.setItem('pf_app_version', version); return; }
+    if (stored === version) return;
+    if (hasUnsavedWork()) { pendingVersion = version; return; }
+    await applyVersion(version);
   } catch (_) {}
 }
+
+async function applyVersion(version){
+  localStorage.setItem('pf_app_version', version);
+  if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+  location.reload();
+}
+
+// Called from safe state transitions (workout finished, onboarding finished)
+// to apply an update that was deferred while unsaved work was in progress.
+function applyPendingUpdate(){
+  if (swReloadPending && !hasUnsavedWork()) { location.reload(); return; }
+  if (pendingVersion && !hasUnsavedWork()) { const v = pendingVersion; pendingVersion = null; applyVersion(v); }
+}
+
+// Re-check whenever the installed PWA is brought back to the foreground —
+// it may have sat backgrounded for days without a cold boot otherwise.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkVersion(); });
+window.addEventListener('focus', () => checkVersion());
 
 checkVersion().then(boot);
 </script>
